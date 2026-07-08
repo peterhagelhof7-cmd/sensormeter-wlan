@@ -259,3 +259,30 @@ Analog zum Sensormeter-Projekt: `scripts/flash-sensormeter-wlan.ps1` wurde zu
 Sensormeter-Schwesterprojekte geflasht werden soll. Liegt identisch in allen
 drei Repos, siehe dortiges `docs/entscheidungen.md` für die volle
 Begründung.
+
+## Versionierung
+
+Bisher war `DEVICE_FIRMWARE_VERSION` an die zuletzt abgeschlossene
+Implementierungsphase gekoppelt (`0.1.0-p0` … `0.1.0-p7`) - ein Schema ohne
+klare Fortsetzung, sobald alle Phasen umgesetzt sind. Zusätzlich hatte
+keines der drei Sensormeter-Repos je einen Git-Tag oder eine GitHub-Release
+angelegt, obwohl die Admin-Guides bereits auf „GitHub-Releases" für
+lokale OTA-Updates verweisen.
+
+**Umstellung auf Semantic Versioning** (`MAJOR.MINOR.PATCH[-PRERELEASE]`,
+https://semver.org/lang/de/): aktueller Stand aller drei
+Sensormeter-Projekte wird auf **`0.9.0-rc1`** (Beta) gesetzt - alle
+Kernfunktionen aus dem Lastenheft sind umgesetzt (P0-P7), aber noch nicht
+vollständig auf echter Hardware verifiziert, daher Release-Candidate-Status
+statt `1.0.0`.
+
+Die Versionsnummer lebt weiterhin als einzige Quelle der Wahrheit in
+`firmware/include/config.h(.example)` (`DEVICE_FIRMWARE_VERSION`, dort auch
+über `/api/status` und die Hauptseite live abrufbar) und wird zusätzlich in
+README, One-Pager und Admin-Guide vermerkt, damit sie auch ohne Blick in
+den Quellcode sichtbar ist.
+
+**Noch nicht Teil dieser Änderung** (separates Thema, hier nur vorgemerkt):
+tatsächliche Git-Tags + GitHub-Releases mit `.bin`-Artefakt pro Version,
+damit der in den Admin-Guides beschriebene OTA-über-Releases-Workflow
+wirklich benutzbar wird, statt nur beschrieben zu sein.
