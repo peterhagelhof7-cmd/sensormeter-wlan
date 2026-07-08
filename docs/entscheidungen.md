@@ -186,6 +186,31 @@ fester String `"Sensormeter WLAN"` statt eines Konfigurationsfelds, da
 Statusreport aber ohne LAN-IP- und Sensor-2-Spalte:
 `Systemname | WLAN-IP | RSSI | Sensor | ISO-Zeit | Uptime`.
 
+## Bekannte Abweichung: Fallback-"Access Point" ist tatsächlich ein WLAN-Client-Beitritt
+
+Beim Schreiben des Admin-Guides (siehe `docs/admin-guide.html` Abschnitt 2.2)
+aufgefallen: `docs/lastenheft.txt` Abschnitt 8 beschreibt den Fallback als
+"eigener Access Point, WLAN SSID 'installer', PSK 'installer'" - das Gerät
+sollte selbst ein WLAN aufspannen, dem man sich zur Einrichtung verbindet.
+`NetworkManager.cpp` setzt das aber nicht so um: es bleibt durchgehend im
+`WIFI_MODE_STA` und versucht per `WiFi.begin("installer", "installer")`
+einem **bereits vorhandenen** Netz mit diesem Namen beizutreten, statt
+`WiFi.softAP(...)` aufzurufen. Ohne einen tatsächlich vorhandenen Hotspot
+namens "installer"/"installer" ist das Gerät im Fallback-Fall gar nicht
+erreichbar - die im Lastenheft beschriebene Einstellungsseite über den
+Access Point wird nie erreicht.
+
+Dasselbe Muster (STA-Beitritt statt SoftAP) steckt identisch im
+Sensormeter-Projekt (WT32-ETH01), dort ebenfalls unverändert seit der
+ursprünglichen Implementierung.
+
+**Entscheidung dieser Runde:** Nicht gefixt, sondern der Admin-Guide
+beschreibt bewusst das tatsächliche (Join-)Verhalten inkl. der praktischen
+Einschränkung (Hotspot mit passendem Namen muss vorher bereitstehen). Ein
+echter SoftAP-Fix (`WiFi.softAP("installer","installer")` statt
+`WiFi.begin(...)`) ist für eine spätere Runde vorgemerkt - betrifft
+potenziell auch das Sensormeter-Projekt.
+
 ## Noch offen / nicht Teil dieser Runde
 
 - Firmware (P0-P7) ist code-vollständig und für jede Phase per `pio run`
