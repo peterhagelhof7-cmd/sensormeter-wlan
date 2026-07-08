@@ -1,0 +1,236 @@
+
+PFLICHTENHEFT – SENSORMETER WLAN (ESP32-WROOM-32 DevKit)
+
+1. SYSTEMARCHITEKTUR
+
+Das System basiert auf einem generischen ESP32-WROOM-32-DevKit (reines
+WLAN, kein Ethernet-PHY) mit folgenden Software-Komponenten:
+
+- FreeRTOS (ESP32 Standard)
+- AsyncWebServer (Web UI)
+- SNMP v1 Stack (Read Only)
+- Syslog Client (UDP 514)
+- NTP Client
+- LittleFS Dateisystem
+- Arduino Framework (empfohlen)
+
+Architekturstil wie beim Sensormeter-Projekt (WT32-ETH01): Manager-Klassen
+in einem kooperativen Hauptloop, zentrale Datenhaltung über einen
+mutex-geschützten DataManager (Thread-Sicherheit siehe dortiges Vorbild –
+async Webserver + Sensor-Polling greifen aus unterschiedlichen Kontexten
+zu).
+
+------------------------------------------------------------
+
+2. SOFTWARESTRUKTUR
+
+2.1 Tasks (FreeRTOS)
+
+Task: SensorTask
+- Intervall: 60 Sekunden
+- Funktion:
+  - DHT22-Werte lesen (Temperatur, Luftfeuchte)
+  - Plausibilitätsprüfung
+  - Übergabe an DataManager
+  - Trigger: Syslog Sendung
+
+Task: NetworkTask
+- Verwaltung WLAN (kein LAN/Ethernet-Zweig, im Unterschied zum
+  Sensormeter-Projekt)
+- DHCP / Static IP Handling
+- Fallback-AP-Aktivierung bei Verbindungsfehler
+
+Task: NTPTask
+- Initial nach 60s
+- danach alle 5h
+- Sync via de.pool.ntp.org
+- Fehlerhandling: Zeit als "nicht synchronisiert" markiert, kein
+  DHCP-Failover nötig (kein zweites Interface vorhanden)
+
+Task: WebServerTask
+- Async HTTP Server
+- REST API + HTML UI
+- Chart.js Datenbereitstellung
+
+Task: DisplayTask
+- OLED Update alle 10 Sekunden
+- Rotation der Informationsseiten
+
+Task: SyslogTask
+- UDP Versand bei jedem Sensorzyklus
+- Fehler-Events sofort senden
+
+------------------------------------------------------------
+
+3. SOFTWAREMODULE
+
+3.1 DataManager
+Zentrale Datenhaltung (mutex-geschützt, siehe Sensormeter-Projekt/
+DataManager als Vorbild):
+- Sensorwert (genau ein Sensor)
+- Systemstatus
+- Netzwerkstatus (WLAN)
+- Zeitstempel
+- Ringbuffer für 7 Tage Stundenwerte
+
+3.2 ConfigManager
+- Laden config.xml aus LittleFS
+- Speichern config.xml
+- XML Parser
+- Default-Werte fallback
+
+3.3 NetworkManager
+- WLAN Init
+- Fallback-AP "installer" bei Verbindungsfehler (kein zweites Interface,
+  daher einfacher als beim Sensormeter-Projekt: kein LAN/WLAN-Vorrang,
+  keine Interface-Auswahl)
+- DHCP/static Umschaltung
+
+3.4 TimeManager
+- NTP Sync
+- Sommer-/Winterzeit (CET/CEST)
+- Uptime tracking
+
+3.5 StorageManager
+- LittleFS Zugriff
+- values.csv write
+- JSON-Puffer für Graph
+
+3.6 SensorManager
+- Ein DHT22 (kein Sensor-2-Zweig, kein RJ45)
+
+------------------------------------------------------------
+
+4. DATENSPEICHERUNG
+
+4.1 Ringbuffer (7 Tage)
+- 168 Stundenwerte
+- Struktur:
+
+struct HourValue {
+  timestamp;
+  temperature;
+  humidity;
+}
+
+4.2 values.csv
+- Logging aller Stundenwerte
+- Export für Web UI
+
+4.3 config.xml
+- Systemkonfiguration
+- WLAN-Parameter (kein LAN-Abschnitt)
+
+------------------------------------------------------------
+
+5. WEBARCHITEKTUR
+
+5.1 Backend (ESP32)
+- JSON API endpoints:
+  /api/status
+  /api/sensor
+  /api/network
+  /api/logs
+  /api/config
+
+5.2 Frontend
+- HTML + CSS (dark mode, analog zum Sensormeter-Projekt)
+- Chart.js integration
+- auto-refresh via JS
+
+------------------------------------------------------------
+
+6. FEHLERBEHANDLUNG
+
+6.1 Netzwerkfehler
+- WLAN reconnect
+- Fallback Access Point "installer"
+- DHCP recovery
+
+6.2 NTP Fehler
+- retry nach 5 min
+- Zeit bleibt bis dahin als "nicht synchronisiert" markiert (kein
+  Interface-Failover, da nur WLAN vorhanden)
+
+6.3 Sensorfehler
+- syslog event
+- letzten gültigen Wert markiert beibehalten statt Absturz
+
+------------------------------------------------------------
+
+7. SNMP IMPLEMENTATION
+
+- SNMP v1 Agent
+- read-only community konfigurierbar
+- polling optimiert (kein Dauer-Refresh)
+- gleiche Basis-OID wie das Sensormeter-Projekt (.1.3.6.1.4.1.99999),
+  Sensor-2-Zweig (.4) bleibt unbelegt/unbeantwortet - Kompatibilität mit
+  dem SNMP-Client des Sensormeter-Display-Projekts ohne Anpassung dort
+
+------------------------------------------------------------
+
+8. PERFORMANCE DESIGN
+
+Zielwerte (wie Sensormeter-Projekt):
+- CPU load < 40%
+- RAM usage < 60%
+- Sensor polling minimal (60s)
+- Webserver non-blocking (Async)
+
+------------------------------------------------------------
+
+9. MEMORY LAYOUT
+
+Flash: Standard-Partitionsschema von PlatformIOs `esp32dev`-Board
+(unveraendert, KEINE eigene partitions.csv noetig) - verifiziert am
+tatsaechlichen Build des Sensormeter-Projekts (WT32-ETH01, identisches
+Board-Target, keine eigene Partitionstabelle in dessen platformio.ini):
+
+  nvs       20K
+  otadata   8K
+  app0 (ota_0)   1280K
+  app1 (ota_1)   1280K
+  spiffs (LittleFS)  1408K
+  coredump  64K
+
+Enthaelt bereits zwei OTA-faehige App-Partitionen (ota_0/ota_1) - lokales
+OTA-Update (Abschnitt 6) ist damit ohne zusaetzlichen Partitionsaufwand
+umsetzbar, siehe entscheidungen.md.
+
+- Firmware: ~1.0-1.3 MB erwartet (etwas kleiner als das Sensormeter-Projekt,
+  da kein Ethernet-Treiber (LAN8720/ETH.h) gelinkt werden muss) - passt
+  komfortabel in die 1280K je App-Slot
+- LittleFS: 1408K verfuegbar, values.csv (7 Tage Stundenwerte) braucht
+  davon nur einen Bruchteil
+
+RAM:
+- Heap reserve: >150 kB minimum
+
+------------------------------------------------------------
+
+10. STARTUP FLOW
+
+BOOT →
+  Init Hardware →
+  Load Config →
+  Init WLAN →
+  Start Services →
+  Wait 60s →
+  NTP Sync →
+  Normal Operation
+
+Fallback:
+  Access Point "installer" →
+  Einstellungsseite zur WLAN-Auswahl →
+  Reboot nach Speichern
+
+------------------------------------------------------------
+
+11. ERWEITERBARKEIT
+
+- Bewusst NICHT für einen zweiten Sensor oder Modul-/RJ45-Erweiterung
+  vorgesehen (Abgrenzung zum Sensormeter/Sensormeter-PRO-Projekt, das
+  genau das bereits abdeckt) - vermeidet doppelten Funktionsumfang
+  zwischen den beiden Produktlinien
+- MQTT optional denkbar, aber nicht Teil dieses Lastenhefts
+- Cloud-Integration bewusst ausgeschlossen

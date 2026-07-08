@@ -1,0 +1,237 @@
+LASTENHEFT – SENSORMETER WLAN (ESP32-WROOM-32 DevKit)
+
+1. PROJEKT
+Projektname: Sensormeter WLAN
+
+2. SYSTEMBASIS
+Hardware:
+- ESP32-WROOM-32 DevKit (generisches Development-Board, reines WLAN,
+  kein Ethernet, kein Modulstecker/RJ45 – siehe entscheidungen.md)
+- OLED SSD1306 128x64 I2C
+- Temperatur-/Luftfeuchtesensor DHT22 (intern, genau 1 Stück, kein
+  zweiter/externer Sensor)
+
+------------------------------------------------------------
+
+3. ZIELSETZUNG
+Das System dient zur lokalen und netzwerkbasierten Erfassung, Speicherung
+und Darstellung von Umweltmesswerten (Temperatur, Luftfeuchte). Die Daten
+werden lokal angezeigt, über Webserver bereitgestellt, via SNMP abrufbar
+gemacht und per Syslog versendet. Bewusst reduzierter Funktionsumfang
+gegenüber dem Schwesterprojekt Sensormeter (WT32-ETH01): kein Ethernet,
+kein zweiter Sensor, keine Modularerweiterung – dafür deutlich günstigeres
+Board.
+
+------------------------------------------------------------
+
+4. SYSTEMVARIANTEN
+Nur eine Variante. Kein "PRO"-Pendant (kein zweiter Sensor, keine
+Modul-/RJ45-Erweiterung) – wer zwei Sensoren oder Erweiterungen braucht,
+nutzt das bestehende Sensormeter- bzw. Sensormeter-PRO-Projekt
+(WT32-ETH01).
+
+------------------------------------------------------------
+
+5. WEBSERVER
+
+5.1 Hauptseite
+Anzeige folgender Daten:
+
+System:
+- Systemzeit (NTP synchronisiert)
+- Systemname
+- Firmwareversion
+- Uptime
+- freier Heap
+
+Netzwerk:
+- WLAN-IP
+- Gateway
+- DNS
+- MAC
+- WLAN SSID
+- WLAN RSSI
+
+Sensor:
+- Temperatur
+- Luftfeuchte
+- Sensorname
+
+5.2 Graph (Chart.js)
+- 7 Tage Verlauf
+- Speicherung nur stündlicher Werte
+- Temperatur: rot
+- Luftfeuchte: blau
+- Y-Achse links: °C
+- Y-Achse rechts: %
+
+5.3 Syslog-Ansicht
+- letzte 5 Meldungen
+
+5.4 Download
+- values.csv Download
+
+------------------------------------------------------------
+
+6. EINSTELLUNGSSEITE (PASSWORTGESCHÜTZT)
+
+Standardpasswort: installer
+
+Funktionen:
+
+System:
+- Systemname
+- Passwort ändern
+- Reboot
+
+Netzwerk:
+- WLAN DHCP / static IP
+- SSID Scan + Auswahl
+- PSK Eingabe
+- Gateway / Netmask
+
+Syslog:
+- Syslog Server IP
+
+Konfiguration:
+- XML Export
+- XML Import
+- Speichern in LittleFS
+
+Firmware:
+- Lokaler .bin-Upload (OTA), Link zu GitHub-Releases
+
+------------------------------------------------------------
+
+7. SNMP (v1 READ ONLY)
+
+Gleiche Basis-OID wie das Sensormeter-Projekt (WT32-ETH01):
+.1.3.6.1.4.1.99999 – damit das Sensormeter-Display-Projekt (SNMP-Client)
+beide Produktvarianten ohne Anpassung abfragen kann. Kein Sensor-2-Zweig
+(nur ein Sensor vorhanden), kein LAN-Zweig (kein Ethernet).
+
+OID Struktur:
+
+.1.3.6.1.4.1.99999.1 System
+- 1.0 Systemname
+- 2.0 Firmwareversion
+- 3.0 Systemtyp ("Sensormeter WLAN")
+
+.1.3.6.1.4.1.99999.2 Netzwerk
+- 1.0 WLAN-IP
+- 2.0 RSSI
+
+.1.3.6.1.4.1.99999.3 Sensor 1
+- 1.0 Name
+- 2.0 Temperatur
+- 3.0 Luftfeuchte
+
+.1.3.6.1.4.1.99999.5 Systemstatus
+- 1.0 Uptime
+- 2.0 Heap
+
+(Abschnitt .4, Sensor 2, entfällt bewusst – bleibt im OID-Baum frei/
+reserviert für den Fall, dass ein Gerät versehentlich mit dem
+Sensormeter-Display gegen die falsche Erwartungshaltung abgefragt wird,
+liefert dort einfach keine Antwort statt eines falschen Werts.)
+
+------------------------------------------------------------
+
+8. NETZWERKLOGIK
+
+Boot:
+- WLAN connect mit gespeicherten Zugangsdaten
+
+Fallback:
+- Keine gespeicherten Zugangsdaten oder Verbindung schlägt nach 5 min
+  fehl → eigener Access Point, WLAN SSID "installer", PSK "installer"
+- Über den Access Point erreichbar: Einstellungsseite zur WLAN-Auswahl
+
+NTP:
+- de.pool.ntp.org
+- 60s nach Boot
+- alle 5h
+- nach Link-Up Events
+
+Fehler:
+- nach 5 min ohne NTP → erneuter Synchronisationsversuch, Zeit bleibt bis
+  dahin als "nicht synchronisiert" markiert
+
+------------------------------------------------------------
+
+9. SYSLOG
+
+UDP Port 514
+
+Format:
+Systemname | WLAN-IP | RSSI | Sensorwerte | ISO Zeit | Uptime
+
+Fehler:
+- NTP fail
+- WLAN-Verbindung verloren
+- Sensor error
+
+------------------------------------------------------------
+
+10. DATEISYSTEM (LittleFS)
+
+10.1 config.xml
+
+<config>
+  <network>
+    <wlan dhcp="true" ip="" mask="" gateway="" ssid="" psk="" />
+  </network>
+
+  <system>
+    <name>Sensormeter WLAN</name>
+    <password>installer</password>
+  </system>
+
+  <syslog>
+    <server>0.0.0.0</server>
+  </syslog>
+</config>
+
+10.2 values.csv
+- timestamp, temperature, humidity
+- stündliche Speicherung für 7 Tage
+
+------------------------------------------------------------
+
+11. DISPLAY (SSD1306)
+
+- Wechsel alle 10 Sekunden
+- größtmögliche Schrift
+
+Screens:
+- Systemname
+- WLAN-IP
+- Uhrzeit
+- Sensorwerte
+- Status WLAN
+
+Boot:
+- Countdown 100 → 0 bis Netzwerk bereit
+
+------------------------------------------------------------
+
+12. ZUSTANDSMODELL
+
+BOOT → INIT → WLAN CHECK
+  ↓
+IF OK → RUN NORMAL MODE
+IF FAIL → FALLBACK MODE (Access Point "installer")
+  ↓
+NTP OK → NORMAL OPERATION
+NTP FAIL → Zeit als "nicht synchronisiert" markiert, Betrieb läuft weiter
+
+------------------------------------------------------------
+
+13. NICHTFUNKTIONALE ANFORDERUNGEN
+- lokal betrieben
+- keine Cloud
+- robustes WLAN-Verhalten (Fallback-AP)
+- geringe Speicherlast
+- wartbar über Webinterface
+- bewusst NICHT erweiterbar um einen zweiten Sensor (siehe Abschnitt 4) –
+  dafür existiert bereits Sensormeter PRO (WT32-ETH01)
