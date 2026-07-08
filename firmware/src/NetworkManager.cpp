@@ -42,8 +42,19 @@ void NetworkManager::applyWlanConfig() {
 
   IPAddress ip, mask, gateway;
   if (ip.fromString(cfg.wlanIp) && mask.fromString(cfg.wlanMask) && gateway.fromString(cfg.wlanGateway)) {
-    WiFi.config(ip, gateway, mask);
-    Serial.println("[NET] WLAN: statische IP angewendet");
+    // WiFi.config() setzt DNS NUR, wenn dns1/dns2 != 0.0.0.0 sind (siehe
+    // WiFiGeneric.cpp::set_esp_interface_dns) - ohne explizite Angabe bliebe
+    // bei statischer IP sonst gar kein DNS-Server gesetzt und die
+    // NTP-Hostnamensaufloesung ("de.pool.ntp.org", siehe TimeManager) wuerde
+    // fehlschlagen. Leeres/ungueltiges DNS-Feld -> Gateway als DNS
+    // verwenden (bei den meisten Heimroutern ohnehin ein funktionierender
+    // DNS-Resolver).
+    IPAddress dns;
+    if (cfg.wlanDns.length() == 0 || !dns.fromString(cfg.wlanDns)) {
+      dns = gateway;
+    }
+    WiFi.config(ip, gateway, mask, dns);
+    Serial.println("[NET] WLAN: statische IP angewendet (DNS: " + dns.toString() + ")");
   } else {
     Serial.println("[NET] WLAN: statische IP konfiguriert, aber ungueltig -> bleibe bei DHCP");
   }

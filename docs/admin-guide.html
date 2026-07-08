@@ -377,7 +377,15 @@ auf ein anderes Netz umstellen (neue SSID/PSK eintragen, speichern,
   <tr><td>SSID</td><td>Name des WLAN-Netzes. Über „SSIDs suchen“ lässt sich eine Liste erreichbarer Netze samt Empfangsstärke abrufen und per Klick übernehmen.</td></tr>
   <tr><td>PSK</td><td>WLAN-Passwort.</td></tr>
   <tr><td>IP / Netzmaske / Gateway</td><td>Nur bei deaktiviertem DHCP relevant.</td></tr>
+  <tr><td>DNS-Server</td><td>Nur bei deaktiviertem DHCP relevant. Leer lassen, um automatisch das Gateway als DNS-Server zu verwenden (funktioniert bei den meisten Heimroutern) — ohne DNS-Server könnte z. B. der NTP-Hostname <span class="code">de.pool.ntp.org</span> nicht aufgelöst werden.</td></tr>
 </table>
+<div class="callout">
+  <div class="callout-title">Hinweis</div>
+  WLAN-/SNMP-Änderungen werden sofort gespeichert, wirken sich aber erst
+  nach einem manuellen <b>Reboot</b> (siehe unten) aus — anders als die
+  Netzwerkeinstellungen beim Sensormeter-Display-Projekt löst das
+  Speichern hier keinen automatischen Neustart aus.
+</div>
 
 <h3>Syslog</h3>
 <table>

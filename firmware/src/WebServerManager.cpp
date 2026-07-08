@@ -152,6 +152,7 @@ String WebServerManager::buildSettingsPageBody() const {
   html += "<label>IP<input type=\"text\" name=\"wlanIp\" value=\"" + cfg.wlanIp + "\"></label>";
   html += "<label>Netzmaske<input type=\"text\" name=\"wlanMask\" value=\"" + cfg.wlanMask + "\"></label>";
   html += "<label>Gateway<input type=\"text\" name=\"wlanGateway\" value=\"" + cfg.wlanGateway + "\"></label>";
+  html += "<label>DNS-Server (leer = Gateway verwenden)<input type=\"text\" name=\"wlanDns\" value=\"" + cfg.wlanDns + "\"></label>";
   html += "</div>";
 
   html += "<div class=\"block\"><h2>Syslog</h2>";
@@ -325,6 +326,7 @@ void WebServerManager::handleApiConfigGet(AsyncWebServerRequest* request) {
   doc["wlanIp"] = cfg.wlanIp;
   doc["wlanMask"] = cfg.wlanMask;
   doc["wlanGateway"] = cfg.wlanGateway;
+  doc["wlanDns"] = cfg.wlanDns;
   doc["syslogServer"] = cfg.syslogServer;
   doc["snmpCommunity"] = cfg.snmpCommunity;
 
@@ -350,6 +352,7 @@ void WebServerManager::handleApiConfigPost(AsyncWebServerRequest* request) {
   if (request->hasParam("wlanIp", true)) cfg.wlanIp = request->getParam("wlanIp", true)->value();
   if (request->hasParam("wlanMask", true)) cfg.wlanMask = request->getParam("wlanMask", true)->value();
   if (request->hasParam("wlanGateway", true)) cfg.wlanGateway = request->getParam("wlanGateway", true)->value();
+  if (request->hasParam("wlanDns", true)) cfg.wlanDns = request->getParam("wlanDns", true)->value();
 
   if (request->hasParam("syslogServer", true)) cfg.syslogServer = request->getParam("syslogServer", true)->value();
 

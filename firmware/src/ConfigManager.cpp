@@ -76,6 +76,7 @@ bool ConfigManager::importXml(const String& xml) {
       cfg.wlanIp = attrOrEmpty(wlan, "ip");
       cfg.wlanMask = attrOrEmpty(wlan, "mask");
       cfg.wlanGateway = attrOrEmpty(wlan, "gateway");
+      cfg.wlanDns = attrOrEmpty(wlan, "dns");
     }
   }
 
@@ -111,6 +112,7 @@ String ConfigManager::exportXml() const {
   wlan->SetAttribute("ip", _config.wlanIp.c_str());
   wlan->SetAttribute("mask", _config.wlanMask.c_str());
   wlan->SetAttribute("gateway", _config.wlanGateway.c_str());
+  wlan->SetAttribute("dns", _config.wlanDns.c_str());
   network->InsertEndChild(wlan);
 
   XMLElement* system = doc.NewElement("system");

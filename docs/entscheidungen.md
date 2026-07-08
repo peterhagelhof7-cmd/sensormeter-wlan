@@ -211,6 +211,28 @@ echter SoftAP-Fix (`WiFi.softAP("installer","installer")` statt
 `WiFi.begin(...)`) ist für eine spätere Runde vorgemerkt - betrifft
 potenziell auch das Sensormeter-Projekt.
 
+## Gefixt: DNS-Server bei statischer WLAN-IP fehlte komplett
+
+Beim Beantworten einer Nutzerfrage ("welchen DNS nutzt Sensormeter WLAN im
+Static-Modus?") aufgefallen: `NetworkManager::applyWlanConfig()` rief bisher
+nur `WiFi.config(ip, gateway, mask)` auf (3-Parameter-Form). Die tatsächliche
+Signatur ist `WiFi.config(ip, gateway, subnet, dns1=0.0.0.0, dns2=0.0.0.0)`,
+und im ESP32-Arduino-Core (`WiFiGeneric.cpp::set_esp_interface_dns()`) wird
+ein DNS-Server nur gesetzt, wenn die übergebene Adresse ungleich `0.0.0.0`
+ist. Ohne explizite Angabe blieb bei statischer IP also **gar kein**
+DNS-Server konfiguriert - die NTP-Hostnamensauflösung
+(`configTzTime(..., "de.pool.ntp.org")` in `TimeManager`) hätte dauerhaft
+fehlgeschlagen. Bei DHCP (Default) betrifft das nicht, da der DNS-Server
+automatisch vom Router mitkommt.
+
+**Fix:** Neues Konfigurationsfeld `wlanDns` (Web-Formular, `ConfigManager`,
+XML-Schema `<wlan dns="...">`) - bei leerem/ungültigem Wert wird das
+Gateway als DNS-Server verwendet (funktioniert bei den meisten
+Heimroutern), sonst der eingetragene Server. Damit dieses Projekt hier
+einen echten Vorteil gegenüber dem Sensormeter-Projekt hat (dort besteht
+dieselbe Lücke unverändert fort, siehe dortiges `NetworkManager.cpp` -
+nicht Teil dieser Runde, betrifft ein anderes Repo).
+
 ## Noch offen / nicht Teil dieser Runde
 
 - Firmware (P0-P7) ist code-vollständig und für jede Phase per `pio run`
