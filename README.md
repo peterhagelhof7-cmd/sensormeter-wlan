@@ -1,5 +1,11 @@
 # Sensormeter WLAN
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/projektfamilie-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/projektfamilie-light.png">
+  <img alt="Sensormeter Projektfamilie: Sensormeter (LAN), Sensormeter WLAN (WLAN) und Sensormeter Display (Touchscreen), verbunden über gemeinsame Architektur und SNMP" src="docs/projektfamilie-light.png">
+</picture>
+
 ESP32-basierter Umweltsensor (Temperatur/Luftfeuchte, DHT22) auf einem
 generischen, günstigen ESP32-WROOM-32-DevKit (reines WLAN, kein
 Ethernet). Bewusst reduzierte, kostengünstigere Variante des
@@ -16,6 +22,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 
 | Datei | Inhalt |
 |---|---|
+| [docs/projektfamilie.html](docs/projektfamilie.html) | Architekturskizze: wie die drei Sensormeter-Projekte zusammenhängen |
 | [docs/lastenheft.txt](docs/lastenheft.txt) | Fachliche Anforderungen: Webseite, Einstellungen, SNMP-OIDs, Netzwerklogik, Zustandsmodell |
 | [docs/pflichtenheft.txt](docs/pflichtenheft.txt) | Technische Umsetzung: FreeRTOS-Tasks, Softwaremodule, Speicherlayout, Fehlerbehandlung |
 | [docs/implementierungsplan.html](docs/implementierungsplan.html) | Visueller Implementierungsplan P0–P7 (lokal im Browser öffnen) |
