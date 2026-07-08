@@ -228,10 +228,12 @@ automatisch vom Router mitkommt.
 **Fix:** Neues Konfigurationsfeld `wlanDns` (Web-Formular, `ConfigManager`,
 XML-Schema `<wlan dns="...">`) - bei leerem/ungültigem Wert wird das
 Gateway als DNS-Server verwendet (funktioniert bei den meisten
-Heimroutern), sonst der eingetragene Server. Damit dieses Projekt hier
-einen echten Vorteil gegenüber dem Sensormeter-Projekt hat (dort besteht
-dieselbe Lücke unverändert fort, siehe dortiges `NetworkManager.cpp` -
-nicht Teil dieser Runde, betrifft ein anderes Repo).
+Heimroutern), sonst der eingetragene Server.
+
+Update 2026-07-09: dieselbe Lücke wurde auch im Sensormeter-Projekt
+(WT32-ETH01) gefunden und dort ebenfalls gefixt (LAN **und** WLAN, siehe
+dortiges `docs/entscheidungen.md`) - kein Vorsprung mehr zwischen beiden
+Projekten in diesem Punkt.
 
 ## Noch offen / nicht Teil dieser Runde
 
