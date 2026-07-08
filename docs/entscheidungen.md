@@ -103,6 +103,27 @@ laufen lassen: bestätigt `ota_0`/`ota_1` (je 1280K) im Standardschema, wie
 in `pflichtenheft.txt` Abschnitt 9 dokumentiert - keine eigene
 `partitions.csv` nötig.
 
+## P1 — NTP-Zeitsynchronisation
+
+### "Link-Up-Event" zaehlt erst nach dem ersten erfolgreichen Sync-Versuch
+lastenheft.txt Abschnitt 8 nennt drei Ausloeser fuer einen NTP-Sync: 60s
+nach Boot, alle 5h, und "nach Link-Up Events". Wortwoertlich umgesetzt
+haette die allererste WLAN-Verbindung selbst schon als "Link-Up-Event"
+gezaehlt und einen Sync-Versuch VOR Ablauf der 60s ausgeloest - das
+widerspraeche dem 60s-Mindestabstand. `TimeManager` behandelt daher nur
+WLAN-Reconnects NACH dem ersten Sync-Versuch als Link-Up-Event; die
+allererste Synchronisation haengt ausschliesslich am 60s-Timer, unabhaengig
+davon, wann WLAN tatsaechlich verbunden ist.
+
+### Kein Zustandswechsel bei NTP-Fehlern (anders als beim Sensormeter-Projekt)
+Das Sensormeter-Projekt hat fuer NTP-Fehler eine eigene Fehlerkette mit
+Zustandswechseln (DHCP_TEST/RESTORE_CONFIG), weil dort zwei Interfaces
+(LAN/WLAN) existieren, zwischen denen umgeschaltet werden kann. Hier gibt
+es nur WLAN - ein NTP-Fehler kann nichts an der Netzwerkkonfiguration
+aendern. Stattdessen: einfacher 5-Minuten-Retry-Takt, `isSynced()` bleibt
+false bis zum naechsten Erfolg, kein Einfluss auf `SystemState` (siehe
+lastenheft.txt Abschnitt 8, bereits in P0 vereinfacht dokumentiert).
+
 ## Noch offen / nicht Teil dieser Runde
 
 - Kein Repository, keine Firmware, kein Implementierungsplan - der

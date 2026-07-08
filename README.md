@@ -38,7 +38,7 @@ Sensormeter-Projekts.
 ## Firmware
 
 `firmware/` ist ein PlatformIO-Projekt (Board `esp32dev`, Framework Arduino).
-Aktueller Stand: **P0 — Grundgerüst & Zustandsmodell** (siehe
+Aktueller Stand: **P1 — Netzwerk (WLAN) & Zeit** (siehe
 [docs/implementierungsplan.html](docs/implementierungsplan.html)).
 
 ```
@@ -49,15 +49,18 @@ pio run --target upload   # flashen
 pio device monitor   # seriellen Log ansehen (115200 Baud)
 ```
 
-Enthalten (P0):
+Enthalten (P0–P1):
 - `DataManager`: zentrale, mutex-geschützte Datenhaltung (Sensorwert,
   Systemstatus, 7-Tage-Ringpuffer, Log) — direkt vom Sensormeter-Projekt
   übernommenes, bewährtes Muster
 - `NetworkManager`: funktionierender Boot-Zustandsautomat (BOOT → INIT →
   WLAN_CHECK → RUN_NORMAL/FALLBACK_MODE), WLAN-Verbindungsaufbau,
   Fallback-Access-Point "installer" nach 5 Minuten ohne Verbindung
-- `ConfigManager`, `StorageManager`, `TimeManager`: Gerüst mit Defaults
-  bzw. No-Op — volle Implementierung (config.xml, NTP) folgt in P1/P2
+- `TimeManager`: NTP-Sync (de.pool.ntp.org, CET/CEST), erster Versuch 60s
+  nach Boot, danach alle 5h, zusätzlich bei WLAN-Reconnect; ohne Erfolg
+  Wiederholung alle 5 Minuten, kein Einfluss auf den Systemzustand
+- `ConfigManager`, `StorageManager`: Gerüst mit Defaults bzw. No-Op —
+  volle Implementierung (config.xml) folgt in P2
 
 Partitionstabelle bereits verifiziert (`gen_esp32part.py`): das
 Standardschema für `esp32dev` bringt `ota_0`/`ota_1` von Haus aus mit,
