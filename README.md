@@ -14,6 +14,8 @@ Ethernet). Bewusst reduzierte, kostengünstigere Variante des
 Erweiterbarkeit — wer zwei Sensoren oder eine Modularerweiterung braucht,
 nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 
+[**One-Pager (PDF)**](docs/sensormeter-wlan-onepager.pdf) — kompakte Projektübersicht auf einer Seite.
+
 **Schwesterprojekte:**
 [Sensormeter](https://github.com/peterhagelhof7-cmd/sensormeter) (WT32-ETH01, Ethernet + bis zu 2 Sensoren) ·
 [Sensormeter Display](https://github.com/peterhagelhof7-cmd/sensormeter-display) (ESP32-Touchdisplay, fragt Sensormeter-Geräte per SNMP ab)
@@ -22,6 +24,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 
 | Datei | Inhalt |
 |---|---|
+| [docs/sensormeter-wlan-onepager.pdf](docs/sensormeter-wlan-onepager.pdf) | One-Pager: Projektübersicht, Architektur, Kennzahlen auf einer Seite |
 | [docs/projektfamilie.html](docs/projektfamilie.html) | Architekturskizze: wie die drei Sensormeter-Projekte zusammenhängen |
 | [docs/lastenheft.txt](docs/lastenheft.txt) | Fachliche Anforderungen: Webseite, Einstellungen, SNMP-OIDs, Netzwerklogik, Zustandsmodell |
 | [docs/pflichtenheft.txt](docs/pflichtenheft.txt) | Technische Umsetzung: FreeRTOS-Tasks, Softwaremodule, Speicherlayout, Fehlerbehandlung |
