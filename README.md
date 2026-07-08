@@ -38,7 +38,7 @@ Sensormeter-Projekts.
 ## Firmware
 
 `firmware/` ist ein PlatformIO-Projekt (Board `esp32dev`, Framework Arduino).
-Aktueller Stand: **P1 — Netzwerk (WLAN) & Zeit** (siehe
+Aktueller Stand: **P2 — Konfigpersistenz** (siehe
 [docs/implementierungsplan.html](docs/implementierungsplan.html)).
 
 ```
@@ -49,7 +49,7 @@ pio run --target upload   # flashen
 pio device monitor   # seriellen Log ansehen (115200 Baud)
 ```
 
-Enthalten (P0–P1):
+Enthalten (P0–P2):
 - `DataManager`: zentrale, mutex-geschützte Datenhaltung (Sensorwert,
   Systemstatus, 7-Tage-Ringpuffer, Log) — direkt vom Sensormeter-Projekt
   übernommenes, bewährtes Muster
@@ -59,8 +59,10 @@ Enthalten (P0–P1):
 - `TimeManager`: NTP-Sync (de.pool.ntp.org, CET/CEST), erster Versuch 60s
   nach Boot, danach alle 5h, zusätzlich bei WLAN-Reconnect; ohne Erfolg
   Wiederholung alle 5 Minuten, kein Einfluss auf den Systemzustand
-- `ConfigManager`, `StorageManager`: Gerüst mit Defaults bzw. No-Op —
-  volle Implementierung (config.xml) folgt in P2
+- `ConfigManager`: `config.xml` auf LittleFS (tinyxml2, vendored),
+  Laden/Speichern mit Default-Fallback, XML-Import/-Export, sicheres
+  Schreiben über `.tmp`-Datei + Rename
+- `StorageManager`: LittleFS-Mount
 
 Partitionstabelle bereits verifiziert (`gen_esp32part.py`): das
 Standardschema für `esp32dev` bringt `ota_0`/`ota_1` von Haus aus mit,

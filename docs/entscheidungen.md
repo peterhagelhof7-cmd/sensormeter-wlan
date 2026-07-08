@@ -124,6 +124,25 @@ aendern. Stattdessen: einfacher 5-Minuten-Retry-Takt, `isSynced()` bleibt
 false bis zum naechsten Erfolg, kein Einfluss auf `SystemState` (siehe
 lastenheft.txt Abschnitt 8, bereits in P0 vereinfacht dokumentiert).
 
+## P2 — Konfigpersistenz
+
+### tinyxml2 vendored (identisch zum Sensormeter-Projekt übernommen)
+Gleiches Problem wie dort: der PlatformIO-Registry-Fork
+`sepastian/tinyxml2` lässt sich unter Windows nicht installieren (kaputter
+Symlink), ein direkter Git-Checkout des Original-Repos bringt unnötigen
+Flash-Ballast (`contrib/`, Testsuite, ~220 KB) mit. Daher dieselben zwei
+vendorten Dateien (`lib/tinyxml2/tinyxml2.{h,cpp}`) 1:1 übernommen statt
+das Problem ein zweites Mal separat zu lösen.
+
+### config.xml-Schema und Speicherlogik direkt übernommen, nur WLAN-only gekürzt
+Lade-/Speicherlogik (inkl. sicherem Schreiben über eine `.tmp`-Datei mit
+anschließendem Rename, damit ein Stromausfall während des Schreibens nicht
+die bisherige funktionierende Konfiguration zerstört) 1:1 vom
+Sensormeter-Projekt übernommen. Entfernt: `<lan>`-Abschnitt (kein
+Ethernet), `<sensors><sensor2>`-Abschnitt und die davon abgeleitete
+`systemType`-Logik ("Sensormeter" vs. "Sensormeter PRO") - hier gibt es
+nur eine Variante, siehe lastenheft.txt Abschnitt 4.
+
 ## Noch offen / nicht Teil dieser Runde
 
 - Kein Repository, keine Firmware, kein Implementierungsplan - der

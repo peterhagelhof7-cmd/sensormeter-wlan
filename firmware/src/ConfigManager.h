@@ -3,14 +3,12 @@
 #include <Arduino.h>
 
 // Laufzeitkonfiguration gemaess docs/lastenheft.txt Abschnitt 10 (config.xml
-// auf LittleFS). P0: nur Gerüst mit Defaults im RAM - echtes Laden/Speichern
-// auf LittleFS + XML-Import/-Export folgt in P2 (siehe
-// docs/implementierungsplan.html).
+// auf LittleFS), Persistenz per tinyxml2 (vendored, siehe lib/tinyxml2/).
 //
 // Anders als beim Sensormeter-Projekt: kein <lan>-Abschnitt (kein Ethernet),
 // kein <sensors><sensor2>-Abschnitt (genau ein Sensor).
 //
-// Ziel-Schema (config.xml, ab P2):
+// Schema (config.xml):
 //
 // <config>
 //   <network>
@@ -44,15 +42,24 @@ struct DeviceConfig {
 
 class ConfigManager {
  public:
-  // P0: setzt nur Defaults (kein LittleFS-Zugriff). Ab P2: laedt config.xml,
-  // legt bei Fehlen/Ungueltigkeit Defaults an und speichert sie sofort.
+  // Laedt config.xml von LittleFS. Fehlt die Datei oder ist sie ungueltig,
+  // werden Defaults verwendet und sofort als neue config.xml gespeichert.
   void begin();
 
   const DeviceConfig& getConfig() const { return _config; }
 
-  // Ab P5 (Einstellungsseite) genutzt; speichert ab P2 sofort auf LittleFS.
+  // Uebernimmt eine neue Konfiguration und speichert sie sofort (fuer die
+  // Einstellungsseite in P5).
   void setConfig(const DeviceConfig& config);
+
+  // XML-Import/-Export. importXml uebernimmt nur bei erfolgreichem Parsen
+  // und speichert dann.
+  bool importXml(const String& xml);
+  String exportXml() const;
+
+  bool save();
 
  private:
   DeviceConfig _config;
+  bool load();
 };
