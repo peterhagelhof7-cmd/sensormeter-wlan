@@ -1,15 +1,13 @@
 // ============================================================================
-// Sensormeter WLAN - Phase P0: Grundgerüst & Zustandsmodell
+// Sensormeter WLAN - Phase P4: OLED-Anzeige
 //
-// DataManager (mutex-geschuetzt, voll funktionsfaehig), ConfigManager/
-// StorageManager/TimeManager als Geruest (Defaults bzw. No-Op, volle
-// Implementierung folgt phasenweise), NetworkManager treibt den
-// Boot-Zustandsautomaten (BOOT -> INIT -> WLAN_CHECK -> RUN_NORMAL /
-// FALLBACK_MODE) bereits echt an: WLAN-Verbindungsversuch, nach 5 Minuten
-// ohne IP automatischer Wechsel auf das Recovery-WLAN "installer".
+// DataManager, NetworkManager, TimeManager, ConfigManager/StorageManager
+// (config.xml auf LittleFS), SensorManager (DHT22) voll funktionsfaehig.
+// DisplayManager zeigt jetzt rotierende Infoseiten auf dem SSD1306
+// (Systemname/WLAN-IP/Uhrzeit/Sensorwerte/Status WLAN, 10s-Takt) sowie
+// einen Boot-Countdown, siehe DisplayManager.h.
 //
-// Naechste Phasen (siehe docs/implementierungsplan.html): P1 NTP + WLAN-
-// Vervollstaendigung, P2 config.xml, P3 DHT22, P4 OLED, P5 Webserver+OTA,
+// Naechste Phasen (siehe docs/implementierungsplan.html): P5 Webserver+OTA,
 // P6 SNMP, P7 Syslog.
 // ============================================================================
 
@@ -17,7 +15,9 @@
 
 #include "ConfigManager.h"
 #include "DataManager.h"
+#include "DisplayManager.h"
 #include "NetworkManager.h"
+#include "SensorManager.h"
 #include "StorageManager.h"
 #include "SystemState.h"
 #include "TimeManager.h"
@@ -33,6 +33,8 @@ ConfigManager configManager;
 StorageManager storageManager;
 NetworkManager networkManager(dataManager, configManager);
 TimeManager timeManager(dataManager, networkManager);
+SensorManager sensorManager(dataManager, timeManager);
+DisplayManager displayManager(dataManager, configManager, networkManager, timeManager);
 
 void setup() {
   Serial.begin(115200);
@@ -48,6 +50,8 @@ void setup() {
   storageManager.begin();
   configManager.begin();
   timeManager.begin();
+  sensorManager.begin();
+  displayManager.begin();
 
   networkManager.begin();  // setzt Zustand auf INIT, dann WLAN_CHECK
 }
@@ -55,5 +59,7 @@ void setup() {
 void loop() {
   networkManager.loop();
   timeManager.loop();
+  sensorManager.loop();
+  displayManager.loop();
   delay(50);
 }

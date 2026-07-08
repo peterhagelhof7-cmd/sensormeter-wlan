@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Sensormeter WLAN — Verdrahtungsschema</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1c2430;
+    background: #ffffff;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  header {
+    background: #0f1f3d;
+    color: #fff;
+    margin: -18mm -16mm 8mm -16mm;
+    padding: 10mm 16mm 8mm 16mm;
+  }
+  .eyebrow { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: #9fb3d9; margin-bottom: 3mm; }
+  h1 { margin: 0 0 2mm 0; font-size: 22px; }
+  .subtitle { color: #cdd8ec; font-size: 12px; }
+  .badges { margin-top: 5mm; display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 3px; font-size: 10px; font-weight: 600; background: #24365c; color: #cdd8ec; }
+  .badge-orange { background: #c8622a; color: #fff; }
+
+  h2 { font-size: 13.5px; color: #8f4a1e; margin: 7mm 0 3mm 0; border-bottom: 1px solid #e4e1d8; padding-bottom: 1.5mm; }
+  p { margin: 0 0 3mm 0; }
+  code { font-family: Consolas, "Cascadia Mono", "Courier New", monospace; background: #f2f0e9; border: 1px solid #e4e1d8; border-radius: 3px; padding: 1px 5px; font-size: 11px; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm 0; }
+  table th, table td { border: 1px solid #e4e1d8; padding: 1.8mm 3mm; font-size: 11.5px; text-align: left; vertical-align: middle; }
+  table th { background: #f2f0e9; }
+  .dot { display: inline-block; width: 3mm; height: 3mm; border-radius: 50%; margin-right: 2mm; vertical-align: middle; }
+  .callout { border-left: 3px solid #c8622a; background: #fbf3ee; padding: 3mm 4mm; margin: 3mm 0; border-radius: 0 3px 3px 0; }
+  .callout-title { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #8f4a1e; margin-bottom: 1mm; }
+  .callout.warn { border-left-color: #a63d2e; background: #fbeeec; }
+  .callout.warn .callout-title { color: #a63d2e; }
+
+  footer { margin-top: 10mm; padding-top: 3mm; border-top: 1px solid #e4e1d8; font-size: 9.5px; color: #6b7280; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Firmware-Projekt · Hobby / Privat</div>
+  <h1>SENSORMETER WLAN — VERDRAHTUNGSSCHEMA</h1>
+  <div class="subtitle">Generisches ESP32-WROOM-32 DevKit (30-Pin, USB-C) + DHT22 + OLED SSD1306</div>
+  <div class="badges">
+    <span class="badge badge-orange">GPIO4 · DHT22</span>
+    <span class="badge">GPIO21/22 · I2C OLED</span>
+    <span class="badge">github.com/peterhagelhof7-cmd/sensormeter-wlan</span>
+  </div>
+</header>
+
+<h2>Bauteile</h2>
+<table>
+  <tr><th>Bauteil</th><th>Anschlüsse</th></tr>
+  <tr><td>ESP32-WROOM-32 DevKit, 30-Pin, USB-C</td><td>—</td></tr>
+  <tr><td>DHT22 / AM2302, 3-Pin-Modul (mit eingebautem Pull-up)</td><td>VCC, GND, DATA (nicht: die nackte 4-Pin-Sensorvariante ohne Modulplatine — die bräuchte einen externen Pull-up)</td></tr>
+  <tr><td>OLED SSD1306, 0,96", 128×64, I2C, 4-Pin</td><td>VCC, GND, SCL, SDA</td></tr>
+</table>
+
+<h2>Pinbelegung</h2>
+<table>
+  <tr><th>ESP32-Pin</th><th>Verbindet mit</th><th>Funktion</th></tr>
+  <tr><td><code>3V3</code></td><td>DHT22 VCC <b>und</b> OLED VCC</td><td><span class="dot" style="background:#c0392b;"></span>Versorgung 3,3V (beide Module 3,3V-tolerant — bewusst nicht VIN/5V, damit die Datenleitungen ohne Pegelwandler direkt an die 3,3V-GPIOs dürfen)</td></tr>
+  <tr><td><code>GND</code></td><td>DHT22 GND <b>und</b> OLED GND</td><td><span class="dot" style="background:#1c2430;"></span>Masse (beliebiger GND-Pin, alle sind intern verbunden)</td></tr>
+  <tr><td><code>GPIO4</code> (D4)</td><td>DHT22 DATA</td><td><span class="dot" style="background:#2e6da4;"></span>1-Wire-Digitalsignal</td></tr>
+  <tr><td><code>GPIO21</code> (D21)</td><td>OLED SDA</td><td><span class="dot" style="background:#5c9e6c;"></span>I2C-Datenleitung (Arduino-ESP32-Standard, <code>Wire.begin()</code> ohne Argumente)</td></tr>
+  <tr><td><code>GPIO22</code> (D22)</td><td>OLED SCL</td><td><span class="dot" style="background:#c8622a;"></span>I2C-Taktleitung (Arduino-ESP32-Standard)</td></tr>
+</table>
+
+<h2>Schema</h2>
+<svg viewBox="0 0 760 420" style="width:100%; max-width:170mm; height:auto; font-family:inherit;">
+  <!-- ESP32 board -->
+  <rect x="40" y="20" width="160" height="380" rx="6" fill="#2b2f36"/>
+  <rect x="95" y="150" width="50" height="60" fill="#c9c9c9"/>
+  <text x="120" y="185" text-anchor="middle" font-size="9" fill="#333">ESP32</text>
+  <text x="120" y="40" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">ESP32-WROOM-32</text>
+  <text x="120" y="54" text-anchor="middle" font-size="8" fill="#9fb3d9">DevKit, 30-Pin</text>
+
+  <!-- Left pins (top to bottom): 3V3, GND, D15, D2, D4, D16, D17, D5, D18, D19, D21, RX0, TX0, D22, D23 -->
+  <!-- highlight 3V3, GND, D4, D21, D22 -->
+  <g font-size="9" fill="#1c2430">
+    <!-- pin rows every 24px starting y=75 -->
+    <g id="leftpins">
+      <text x="35" y="79" text-anchor="end">3V3</text>
+      <text x="35" y="103" text-anchor="end">GND</text>
+      <text x="35" y="127" text-anchor="end">D15</text>
+      <text x="35" y="151" text-anchor="end">D2</text>
+      <text x="35" y="175" text-anchor="end" font-weight="700" fill="#2e6da4">D4</text>
+      <text x="35" y="199" text-anchor="end">D16</text>
+      <text x="35" y="223" text-anchor="end">D17</text>
+      <text x="35" y="247" text-anchor="end">D5</text>
+      <text x="35" y="271" text-anchor="end">D18</text>
+      <text x="35" y="295" text-anchor="end">D19</text>
+      <text x="35" y="319" text-anchor="end" font-weight="700" fill="#5c9e6c">D21</text>
+      <text x="35" y="343" text-anchor="end">RX0</text>
+      <text x="35" y="367" text-anchor="end">TX0</text>
+      <text x="35" y="391" text-anchor="end" font-weight="700" fill="#c8622a">D22</text>
+    </g>
+  </g>
+  <!-- pin dots on the left edge of the board -->
+  <g fill="#8a93a3">
+    <circle cx="40" cy="75" r="2.5"/>
+    <circle cx="40" cy="99" r="2.5"/>
+    <circle cx="40" cy="123" r="2.5"/>
+    <circle cx="40" cy="147" r="2.5"/>
+    <circle cx="40" cy="171" r="2.5" fill="#2e6da4"/>
+    <circle cx="40" cy="195" r="2.5"/>
+    <circle cx="40" cy="219" r="2.5"/>
+    <circle cx="40" cy="243" r="2.5"/>
+    <circle cx="40" cy="267" r="2.5"/>
+    <circle cx="40" cy="291" r="2.5"/>
+    <circle cx="40" cy="315" r="2.5" fill="#5c9e6c"/>
+    <circle cx="40" cy="339" r="2.5"/>
+    <circle cx="40" cy="363" r="2.5"/>
+    <circle cx="40" cy="387" r="2.5" fill="#c8622a"/>
+  </g>
+  <!-- DHT22 module: 3 Pins untereinander, alle links am Modul -->
+  <rect x="460" y="60" width="150" height="120" rx="4" fill="#f2f0e9" stroke="#c7c2b4"/>
+  <text x="535" y="80" text-anchor="middle" font-size="10" font-weight="700">DHT22</text>
+  <text x="535" y="93" text-anchor="middle" font-size="8" fill="#6b7280">3-Pin-Modul</text>
+  <circle cx="480" cy="115" r="3" fill="#c0392b"/><text x="490" y="119" font-size="9">VCC</text>
+  <circle cx="480" cy="135" r="3" fill="#1c2430"/><text x="490" y="139" font-size="9">GND</text>
+  <circle cx="480" cy="155" r="3" fill="#2e6da4"/><text x="490" y="159" font-size="9">DATA</text>
+
+  <!-- OLED module: 4 Pins untereinander -->
+  <rect x="460" y="220" width="150" height="140" rx="4" fill="#f2f0e9" stroke="#c7c2b4"/>
+  <text x="535" y="240" text-anchor="middle" font-size="10" font-weight="700">OLED SSD1306</text>
+  <text x="535" y="253" text-anchor="middle" font-size="8" fill="#6b7280">0,96" · I2C · 4-Pin</text>
+  <circle cx="480" cy="278" r="3" fill="#c0392b"/><text x="490" y="282" font-size="9">VCC</text>
+  <circle cx="480" cy="298" r="3" fill="#1c2430"/><text x="490" y="302" font-size="9">GND</text>
+  <circle cx="480" cy="318" r="3" fill="#5c9e6c"/><text x="490" y="322" font-size="9">SDA</text>
+  <circle cx="480" cy="338" r="3" fill="#c8622a"/><text x="490" y="342" font-size="9">SCL</text>
+
+  <!-- Wires: 3V3 -> both VCC (red) -->
+  <path d="M40,75 C 260,75 260,115 480,115" fill="none" stroke="#c0392b" stroke-width="1.6"/>
+  <path d="M40,75 C 260,75 260,278 480,278" fill="none" stroke="#c0392b" stroke-width="1.6"/>
+  <!-- Wires: GND -> both GND (black) -->
+  <path d="M40,99 C 270,99 270,135 480,135" fill="none" stroke="#1c2430" stroke-width="1.6"/>
+  <path d="M40,99 C 270,99 270,298 480,298" fill="none" stroke="#1c2430" stroke-width="1.6"/>
+  <!-- Wire: D4 -> DHT22 DATA (blue) -->
+  <path d="M40,171 C 300,171 300,155 480,155" fill="none" stroke="#2e6da4" stroke-width="1.6"/>
+  <!-- Wire: D21 -> OLED SDA (green) -->
+  <path d="M40,315 C 320,315 320,318 480,318" fill="none" stroke="#5c9e6c" stroke-width="1.6"/>
+  <!-- Wire: D22 -> OLED SCL (orange) -->
+  <path d="M40,387 C 340,387 340,338 480,338" fill="none" stroke="#c8622a" stroke-width="1.6"/>
+</svg>
+
+<div class="callout">
+  <div class="callout-title">Hinweis</div>
+  Beide Module dürfen sich denselben <code>3V3</code>- und <code>GND</code>-Pin
+  teilen (z. B. über eine kleine Steckbrett-Schiene) oder je einen eigenen,
+  beliebigen <code>GND</code>-Pin des Boards nutzen — alle GND-Pins sind
+  intern verbunden.
+</div>
+<div class="callout warn">
+  <div class="callout-title">Nicht verwechseln</div>
+  <code>VIN</code>/<code>5V</code> nicht für die Module verwenden — beide
+  laufen bewusst an <code>3V3</code>, damit DATA/SDA/SCL direkt (ohne
+  Pegelwandler) an die 3,3V-Logik-GPIOs des ESP32 angeschlossen werden
+  dürfen.
+</div>
+
+<h2>Vermiedene Pins</h2>
+<p>Bewusst nicht belegt: <code>GPIO0/2/5/12/15</code> (Boot-Strapping-Pins,
+könnten den Bootvorgang stören) sowie <code>GPIO6–11</code> (intern am
+Flash-SPI, auf DevKits ohnehin nicht herausgeführt). Details siehe
+<code>docs/entscheidungen.md</code>.</p>
+
+<footer>
+  Sensormeter WLAN — Verdrahtungsschema · github.com/peterhagelhof7-cmd/sensormeter-wlan ·
+  Entwickelt mit Unterstützung von Claude (Anthropic) als Coding-Assistent
+</footer>
+
+</body>
+</html>
