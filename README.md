@@ -23,7 +23,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/entscheidungen.md](docs/entscheidungen.md) | Entscheidungsprotokoll: Boardwahl, Pinbelegung, OTA-Partitionierung, SNMP-Kompatibilität, bekannte Abweichungen |
 | [docs/verdrahtung.html](docs/verdrahtung.html) | Pin-Tabelle + Verdrahtungsskizze (DHT22, OLED) |
 | [docs/admin-guide.html](docs/admin-guide.html) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog |
-| [scripts/flash-sensormeter-wlan.ps1](scripts/flash-sensormeter-wlan.ps1) | PowerShell-Skript: Abhängigkeiten installieren, Repo holen, bauen, flashen |
+| [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display): Abhängigkeiten installieren, Repo holen, bauen, flashen |
 
 Dieses Projekt hat (im Unterschied zu den beiden Schwesterprojekten) keine
 vorgegebene Materialsammlung – Lastenheft, Pflichtenheft und BOM wurden
@@ -51,7 +51,7 @@ PlatformIO bei Bedarf automatisch, klont/aktualisiert das Repo, baut und
 flasht):
 
 ```
-scripts\flash-sensormeter-wlan.ps1
+scripts\flash.ps1 -Project wlan
 ```
 
 Details siehe [docs/admin-guide.html](docs/admin-guide.html). Manuelle

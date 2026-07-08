@@ -250,3 +250,12 @@ Projekten in diesem Punkt.
   Display-Helligkeit/WLAN-Sendeverhalten auf echter Hardware
 - Konkrete Preisrecherche (siehe `stueckliste.md`) ist eine
   Marktabschätzung, keine verifizierten Händlerpreise
+
+## Flash-Skript vereinheitlicht (`flash.ps1` statt `flash-sensormeter-wlan.ps1`)
+
+Analog zum Sensormeter-Projekt: `scripts/flash-sensormeter-wlan.ps1` wurde zu
+`scripts/flash.ps1` verallgemeinert - das Skript fragt jetzt zuerst
+(interaktiv oder per `-Project sensormeter|wlan|display`), welches der drei
+Sensormeter-Schwesterprojekte geflasht werden soll. Liegt identisch in allen
+drei Repos, siehe dortiges `docs/entscheidungen.md` für die volle
+Begründung.

@@ -162,9 +162,11 @@ der Installation im Geräte-Manager unter „Anschlüsse (COM &amp; LPT)“
 prüfen, ob ein neuer Port (z. B. <span class="code">COM5</span>) erscheint.</p>
 
 <h2>1.3 PowerShell-Skript ausführen</h2>
-<p>Das Skript <span class="code">scripts/flash-sensormeter-wlan.ps1</span>
-übernimmt die komplette Einrichtung: es installiert fehlende Werkzeuge
-(Python, Git, PlatformIO), holt den Quellcode, legt bei Bedarf
+<p>Das Skript <span class="code">scripts/flash.ps1</span> übernimmt die
+komplette Einrichtung: es fragt zuerst, welches der drei
+Sensormeter-Projekte geflasht werden soll (dasselbe Skript liegt identisch
+in allen drei Repos), installiert dann fehlende Werkzeuge (Python, Git,
+PlatformIO), holt den Quellcode, legt bei Bedarf
 <span class="code">include/config.h</span> an und baut/flasht die
 Firmware — ganz ohne manuelle Vorbereitung.</p>
 <h3>Vorgehen</h3>
@@ -172,9 +174,11 @@ Firmware — ganz ohne manuelle Vorbereitung.</p>
   <li>PowerShell öffnen (Start-Menü → „PowerShell“ eintippen)</li>
   <li>In das gewünschte Zielverzeichnis wechseln oder das Skript direkt aus
       einem bereits vorhandenen Checkout heraus starten</li>
-  <li>Skript ausführen:</li>
+  <li>Skript ausführen und bei der Projektabfrage <b>2</b> (Sensormeter
+      WLAN) wählen, oder direkt mit <span class="code">-Project wlan</span>
+      aufrufen:</li>
 </ol>
-<pre class="code-block">.\flash-sensormeter-wlan.ps1</pre>
+<pre class="code-block">.\flash.ps1 -Project wlan</pre>
 <p>Das Skript prüft nacheinander, ob Python, Git und PlatformIO vorhanden und
 tatsächlich funktionsfähig sind (nicht nur, ob ein Befehl mit diesem Namen
 existiert — Windows legt z. B. einen „python“-Store-Alias an, der keine
@@ -186,12 +190,13 @@ die Firmware gebaut.</p>
 <h3>Nützliche Parameter</h3>
 <table>
   <tr><th>Parameter</th><th>Wirkung</th></tr>
+  <tr><td><span class="code">-Project wlan</span></td><td>Projekt direkt angeben, ohne die interaktive Abfrage (alternativ <span class="code">sensormeter</span> oder <span class="code">display</span>)</td></tr>
   <tr><td><span class="code">-RepoPath &lt;Pfad&gt;</span></td><td>Zielordner für den Checkout (Default: Ordner „sensormeter-wlan“ neben dem Skript)</td></tr>
   <tr><td><span class="code">-Port COM5</span></td><td>Seriellen Port fest vorgeben, falls die automatische Erkennung fehlschlägt oder mehrere Boards angeschlossen sind</td></tr>
   <tr><td><span class="code">-SkipUpload</span></td><td>Nur bauen, nicht flashen — z. B. um vorab zu prüfen, ob alles kompiliert, ohne dass ein Board angeschlossen sein muss</td></tr>
 </table>
-<pre class="code-block">.\flash-sensormeter-wlan.ps1 -Port COM5
-.\flash-sensormeter-wlan.ps1 -RepoPath C:\Projekte\sensormeter-wlan -SkipUpload</pre>
+<pre class="code-block">.\flash.ps1 -Project wlan -Port COM5
+.\flash.ps1 -Project wlan -RepoPath C:\Projekte\sensormeter-wlan -SkipUpload</pre>
 
 <h2>1.4 Flashen</h2>
 <p>Ohne <span class="code">-SkipUpload</span> schließt das Skript direkt mit
