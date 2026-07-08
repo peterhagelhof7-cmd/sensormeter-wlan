@@ -31,8 +31,8 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/implementierungsplan.html](docs/implementierungsplan.html) | Visueller Implementierungsplan P0–P7 (lokal im Browser öffnen) |
 | [docs/stueckliste.md](docs/stueckliste.md) | Bauteile pro Gerät + Preisschätzung |
 | [docs/entscheidungen.md](docs/entscheidungen.md) | Entscheidungsprotokoll: Boardwahl, Pinbelegung, OTA-Partitionierung, SNMP-Kompatibilität, bekannte Abweichungen |
-| [docs/verdrahtung.html](docs/verdrahtung.html) | Pin-Tabelle + Verdrahtungsskizze (DHT22, OLED) |
-| [docs/admin-guide.html](docs/admin-guide.html) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog |
+| [docs/verdrahtung.pdf](docs/verdrahtung.pdf) | Pin-Tabelle + Verdrahtungsskizze (DHT22, OLED) |
+| [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog |
 | [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display): Abhängigkeiten installieren, Repo holen, bauen, flashen |
 
 Dieses Projekt hat (im Unterschied zu den beiden Schwesterprojekten) keine
@@ -68,7 +68,7 @@ flasht):
 scripts\flash.ps1 -Project wlan
 ```
 
-Details siehe [docs/admin-guide.html](docs/admin-guide.html). Manuelle
+Details siehe [docs/admin-guide.pdf](docs/admin-guide.pdf). Manuelle
 Alternative ohne Skript:
 
 ```
@@ -113,7 +113,7 @@ keine eigene `partitions.csv` nötig (siehe `docs/entscheidungen.md`).
   Sensormeter-Projekt übernommen — in beiden Projekten aktuell als
   WLAN-Client-Beitritt statt als eigener Access Point umgesetzt (bekannte
   Abweichung von der ursprünglichen Spezifikation, siehe
-  `docs/entscheidungen.md` und `docs/admin-guide.html` Abschnitt 2.2).
+  `docs/entscheidungen.md` und `docs/admin-guide.pdf` Abschnitt 2.2).
 
 ## Über dieses Projekt
 

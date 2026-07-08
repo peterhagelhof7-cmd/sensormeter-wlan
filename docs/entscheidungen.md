@@ -188,7 +188,7 @@ Statusreport aber ohne LAN-IP- und Sensor-2-Spalte:
 
 ## Bekannte Abweichung: Fallback-"Access Point" ist tatsächlich ein WLAN-Client-Beitritt
 
-Beim Schreiben des Admin-Guides (siehe `docs/admin-guide.html` Abschnitt 2.2)
+Beim Schreiben des Admin-Guides (siehe `docs/admin-guide.pdf` Abschnitt 2.2)
 aufgefallen: `docs/lastenheft.txt` Abschnitt 8 beschreibt den Fallback als
 "eigener Access Point, WLAN SSID 'installer', PSK 'installer'" - das Gerät
 sollte selbst ein WLAN aufspannen, dem man sich zur Einrichtung verbindet.

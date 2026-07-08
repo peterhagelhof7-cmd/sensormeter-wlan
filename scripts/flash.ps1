@@ -91,7 +91,7 @@ $Projects = @{
     FolderName  = "sensormeter-wlan"
     HasConfigH  = $true
     FlashNote   = "Board per USB-C-Kabel anschliessen - ggf. CP2102-/CH340-Treiber installieren."
-    SuccessNote = "Beim ersten Start: WLAN ueber die Weboberflaeche einrichten - ohne gespeicherte Zugangsdaten versucht das Geraet nach 5 Minuten, dem Netz 'installer'/'installer' beizutreten (siehe docs/admin-guide.html Abschnitt 2.2)."
+    SuccessNote = "Beim ersten Start: WLAN ueber die Weboberflaeche einrichten - ohne gespeicherte Zugangsdaten versucht das Geraet nach 5 Minuten, dem Netz 'installer'/'installer' beizutreten (siehe docs/admin-guide.pdf Abschnitt 2.2)."
   }
   "display" = @{
     DisplayName = "Sensormeter Display (ESP32-Touchdisplay, HW-458B)"
