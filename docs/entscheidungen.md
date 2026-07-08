@@ -79,6 +79,30 @@ Gleiche Konvention wie beim Sensormeter-Projekt (Fallback-SSID/PSK
 hinweg, ohne dass sich jemand zwei verschiedene Fallback-Vorgehen merken
 muss.
 
+## P0 — Grundgerüst & Zustandsmodell
+
+### DataManager von Anfang an mutex-geschützt, direkt vom Sensormeter-Projekt übernommen
+Struktur/Feldnamen/Locking-Muster 1:1 vom bewährten `DataManager` des
+Sensormeter-Projekts übernommen, nur `sensor1`/`sensor2` zu einem einzigen
+`sensor`-Feld zusammengefasst. Kein Grund, ein funktionierendes,
+produktiv verifiziertes Muster neu zu erfinden.
+
+### Fehlendes WLAN: volle 5 Minuten Wartezeit vor Fallback-AP (wie spezifiziert)
+Ein frisch gebootetes Gerät ohne gespeicherte WLAN-Zugangsdaten wartet die
+vollen 5 Minuten (lastenheft.txt Abschnitt 8) bis zum Wechsel auf den
+Fallback-Access-Point "installer" - es gibt (anders als beim
+Sensormeter-Projekt mit Ethernet als Rückfallebene) waehrend dieser Zeit
+gar keine Erreichbarkeit. Das ist keine Uebernahme eines Sensormeter-Bugs,
+sondern exakt das im eigenen Lastenheft spezifizierte Verhalten -
+festgehalten, damit es beim ersten Praxistest nicht als Fehler
+missverstanden wird.
+
+### Partitionstabelle verifiziert statt nur behauptet
+`gen_esp32part.py` gegen die tatsächlich aus P0 generierte `partitions.bin`
+laufen lassen: bestätigt `ota_0`/`ota_1` (je 1280K) im Standardschema, wie
+in `pflichtenheft.txt` Abschnitt 9 dokumentiert - keine eigene
+`partitions.csv` nötig.
+
 ## Noch offen / nicht Teil dieser Runde
 
 - Kein Repository, keine Firmware, kein Implementierungsplan - der

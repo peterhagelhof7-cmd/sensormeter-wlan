@@ -37,9 +37,31 @@ Sensormeter-Projekts.
 
 ## Firmware
 
-Noch nicht begonnen — nächster Schritt laut
-[Implementierungsplan](docs/implementierungsplan.html) ist P0
-(Projektstruktur, Boot-Zustandsautomat).
+`firmware/` ist ein PlatformIO-Projekt (Board `esp32dev`, Framework Arduino).
+Aktueller Stand: **P0 — Grundgerüst & Zustandsmodell** (siehe
+[docs/implementierungsplan.html](docs/implementierungsplan.html)).
+
+```
+cd firmware
+cp include/config.h.example include/config.h
+pio run              # bauen
+pio run --target upload   # flashen
+pio device monitor   # seriellen Log ansehen (115200 Baud)
+```
+
+Enthalten (P0):
+- `DataManager`: zentrale, mutex-geschützte Datenhaltung (Sensorwert,
+  Systemstatus, 7-Tage-Ringpuffer, Log) — direkt vom Sensormeter-Projekt
+  übernommenes, bewährtes Muster
+- `NetworkManager`: funktionierender Boot-Zustandsautomat (BOOT → INIT →
+  WLAN_CHECK → RUN_NORMAL/FALLBACK_MODE), WLAN-Verbindungsaufbau,
+  Fallback-Access-Point "installer" nach 5 Minuten ohne Verbindung
+- `ConfigManager`, `StorageManager`, `TimeManager`: Gerüst mit Defaults
+  bzw. No-Op — volle Implementierung (config.xml, NTP) folgt in P1/P2
+
+Partitionstabelle bereits verifiziert (`gen_esp32part.py`): das
+Standardschema für `esp32dev` bringt `ota_0`/`ota_1` von Haus aus mit,
+keine eigene `partitions.csv` nötig (siehe `docs/entscheidungen.md`).
 
 ## Zusammenhang mit den Schwesterprojekten
 
