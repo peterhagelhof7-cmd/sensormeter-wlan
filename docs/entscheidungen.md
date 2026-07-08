@@ -286,3 +286,12 @@ den Quellcode sichtbar ist.
 tatsächliche Git-Tags + GitHub-Releases mit `.bin`-Artefakt pro Version,
 damit der in den Admin-Guides beschriebene OTA-über-Releases-Workflow
 wirklich benutzbar wird, statt nur beschrieben zu sein.
+
+### Firmware-Version auch auf dem OLED nachgetragen
+
+Beim Einführen der Versionierung nachgefragt und geprüft: Webserver
+(Hauptseite + `/api/status`) und SNMP (`.1.3.6.1.4.1.99999.1.2.0`) zeigten
+die Firmware-Version bereits, das OLED bislang nicht. Ergänzt als zweite
+Zeile auf der Status-Seite (Seite 5, `DisplayManager::drawStatusPage()`) -
+damit ist die Version über alle drei Schnittstellen einsehbar, nicht nur
+über Web/SNMP.

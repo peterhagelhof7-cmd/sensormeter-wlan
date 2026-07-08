@@ -7,6 +7,13 @@
 #include "SystemState.h"
 #include "pins.h"
 
+#if __has_include("config.h")
+#include "config.h"
+#endif
+#ifndef DEVICE_FIRMWARE_VERSION
+#define DEVICE_FIRMWARE_VERSION "0.0.0"
+#endif
+
 static const int SCREEN_WIDTH = 128;
 static const int SCREEN_HEIGHT = 64;
 static const uint8_t SSD1306_I2C_ADDRESS = 0x3C;
@@ -101,13 +108,14 @@ void DisplayManager::drawSensorPage() {
 }
 
 void DisplayManager::drawStatusPage() {
-  String lines[1];
+  String lines[2];
   if (_network.isUsingFallbackWlan()) {
     lines[0] = "WLAN Fallback";
   } else {
     lines[0] = String("WLAN ") + (_network.isWlanUp() ? "OK" : "--");
   }
-  drawLines(lines, 1);
+  lines[1] = "v" DEVICE_FIRMWARE_VERSION;
+  drawLines(lines, 2);
 }
 
 void DisplayManager::drawPage(int page) {
