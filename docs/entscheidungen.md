@@ -143,13 +143,61 @@ Ethernet), `<sensors><sensor2>`-Abschnitt und die davon abgeleitete
 `systemType`-Logik ("Sensormeter" vs. "Sensormeter PRO") - hier gibt es
 nur eine Variante, siehe lastenheft.txt Abschnitt 4.
 
+## P3 — Sensorik
+
+### Plausibilitätsgrenzen und Ringpuffer-Logik 1:1 vom Sensormeter-Projekt übernommen
+`plausibleDht22()` (-40..80 °C, 0..100 % rF laut Datenblatt) sowie die
+stündliche, NTP-Zeit-gated Ringpuffer-Ablage sind identisch zum externen
+DHT22-Zweig des Sensormeter-Projekts - bewährtes Muster, keine
+Sonderbehandlung nötig, da hier ohnehin nur ein Sensor existiert statt
+eines optionalen zweiten.
+
+## P4 — Display
+
+### Rotationsseiten reduziert (kein LAN, kein Sensor 2)
+`DisplayManager` übernimmt Boot-Countdown- und Seitenrotationslogik vom
+Sensormeter-Projekt, aber mit nur 5 statt 6 Seiten (Systemname/WLAN-IP/
+Uhrzeit/Sensor/Status) - kein LAN-Seiten-Zweig, da kein Ethernet vorhanden.
+
+## P5 — Webserver & lokales OTA
+
+### Seitenaufbau, REST-API und OTA-Streaming 1:1 vom Sensormeter-Projekt übernommen
+`WebServerManager`/`OtaManager` sind bewusst nahezu unverändert vom
+Sensormeter-Projekt übernommen (gleiches Seitenlayout, gleiche
+API-Routen), nur um die LAN-Felder (Einstellungen, `/api/network`) und das
+Sensor-2-Formular gekürzt. Kein HTTPS-Client/Remote-Versionscheck, gleiche
+Begründung wie dort (Flash-Budget) - hier zusätzlich unnötig, da das
+Flash-Budget durch den Wegfall von LAN/Sensor-2-Code ohnehin entspannter
+ist (76,6 % nach P7 statt der beim Sensormeter-Projekt knapperen Auslastung).
+
+## P6 — SNMP
+
+### OID-Struktur exakt wie in lastenheft.txt Abschnitt 7 festgelegt
+`.1.3.6.1.4.1.99999.2` hat hier nur zwei statt drei Einträge (WLAN-IP=.1,
+RSSI=.2 - kein LAN-IP-Eintrag), abweichend von der Nummerierung im
+Sensormeter-Projekt (dort LAN=.1, WLAN=.2, RSSI=.3). Systemtyp ist ein
+fester String `"Sensormeter WLAN"` statt eines Konfigurationsfelds, da
+`ConfigManager` hier kein `systemType` kennt (nur eine Produktvariante).
+
+## P7 — Syslog
+
+### Statusreport-Format gekürzt (kein LAN-IP, kein Sensor-2-Feld)
+`SyslogManager` 1:1 vom Sensormeter-Projekt übernommen, Pipe-Format im
+Statusreport aber ohne LAN-IP- und Sensor-2-Spalte:
+`Systemname | WLAN-IP | RSSI | Sensor | ISO-Zeit | Uptime`.
+
 ## Noch offen / nicht Teil dieser Runde
 
-- Kein Repository, keine Firmware, kein Implementierungsplan - der
-  Auftrag war ausdrücklich nur "Infos sammeln und in den Projektordner
-  schreiben" (Lastenheft, Pflichtenheft, BOM)
+- Firmware (P0-P7) ist code-vollständig und für jede Phase per `pio run`
+  fehlerfrei gebaut worden, aber **noch auf keiner realen Hardware
+  getestet** - die bestellten ESP32-WROOM-32-Boards sind zum Zeitpunkt
+  dieser Runde noch nicht geliefert. Insbesondere ungetestet: DHT22-Timing
+  auf echtem GPIO4, SSD1306-I2C-Ansprache, WLAN-Fallback-AP-Übergang nach
+  5 Minuten, SNMP-Antworten gegen einen echten Client (Sensormeter-Display),
+  Syslog-Empfang auf einem echten Server, OTA-Upload-Flow über die
+  Einstellungsseite.
 - Exaktes Strombudget/Netzteilempfehlung noch nicht im Detail berechnet
-  (siehe `stueckliste.md`) - sinnvoll erst nach Festlegung von
-  Display-Helligkeit/WLAN-Sendeverhalten in der Firmware
+  (siehe `stueckliste.md`) - sinnvoll erst nach Praxistest von
+  Display-Helligkeit/WLAN-Sendeverhalten auf echter Hardware
 - Konkrete Preisrecherche (siehe `stueckliste.md`) ist eine
   Marktabschätzung, keine verifizierten Händlerpreise

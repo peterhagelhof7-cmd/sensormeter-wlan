@@ -1,14 +1,19 @@
 // ============================================================================
-// Sensormeter WLAN - Phase P4: OLED-Anzeige
+// Sensormeter WLAN - Phase P7: Syslog
 //
-// DataManager, NetworkManager, TimeManager, ConfigManager/StorageManager
-// (config.xml auf LittleFS), SensorManager (DHT22) voll funktionsfaehig.
-// DisplayManager zeigt jetzt rotierende Infoseiten auf dem SSD1306
-// (Systemname/WLAN-IP/Uhrzeit/Sensorwerte/Status WLAN, 10s-Takt) sowie
-// einen Boot-Countdown, siehe DisplayManager.h.
+// Verdrahtet alle Module. ConfigManager laedt/speichert config.xml auf
+// LittleFS; NetworkManager bringt WLAN (DHCP/statisch, Fallback-AP) hoch und
+// treibt den Boot-Zustandsautomaten aus docs/lastenheft.txt an; TimeManager
+// haengt sich mit der NTP-Sync-Kette daran; SensorManager liest DHT22 im
+// 60s-Takt; DisplayManager zeigt Boot-Countdown und rotierende Infoseiten;
+// WebServerManager stellt Hauptseite, Einstellungsseite, REST-API und
+// lokalen OTA-Upload bereit (async, Port 80); SNMPManager beantwortet
+// SNMP-v1/v2c-GET-Anfragen read-only (Port 161); SyslogManager sendet bei
+// jedem Sensorzyklus einen Statusreport sowie Fehler-Events sofort per UDP
+// (Port 514).
 //
-// Naechste Phasen (siehe docs/implementierungsplan.html): P5 Webserver+OTA,
-// P6 SNMP, P7 Syslog.
+// Damit sind alle Phasen aus docs/implementierungsplan.html (P0-P7)
+// umgesetzt.
 // ============================================================================
 
 #include <Arduino.h>
@@ -17,10 +22,14 @@
 #include "DataManager.h"
 #include "DisplayManager.h"
 #include "NetworkManager.h"
+#include "OtaManager.h"
+#include "SNMPManager.h"
 #include "SensorManager.h"
 #include "StorageManager.h"
+#include "SyslogManager.h"
 #include "SystemState.h"
 #include "TimeManager.h"
+#include "WebServerManager.h"
 
 #if __has_include("config.h")
 #include "config.h"
@@ -35,6 +44,10 @@ NetworkManager networkManager(dataManager, configManager);
 TimeManager timeManager(dataManager, networkManager);
 SensorManager sensorManager(dataManager, timeManager);
 DisplayManager displayManager(dataManager, configManager, networkManager, timeManager);
+OtaManager otaManager;
+WebServerManager webServerManager(dataManager, configManager, networkManager, otaManager, timeManager);
+SNMPManager snmpManager(dataManager, configManager, networkManager);
+SyslogManager syslogManager(dataManager, configManager, networkManager, timeManager);
 
 void setup() {
   Serial.begin(115200);
@@ -52,8 +65,11 @@ void setup() {
   timeManager.begin();
   sensorManager.begin();
   displayManager.begin();
+  syslogManager.begin();
 
-  networkManager.begin();  // setzt Zustand auf INIT, dann WLAN_CHECK
+  networkManager.begin();     // setzt Zustand auf INIT, dann WLAN_CHECK
+  webServerManager.begin();   // async - kein eigener loop()-Aufruf noetig
+  snmpManager.begin();
 }
 
 void loop() {
@@ -61,5 +77,7 @@ void loop() {
   timeManager.loop();
   sensorManager.loop();
   displayManager.loop();
+  snmpManager.loop();
+  syslogManager.loop();
   delay(50);
 }
