@@ -77,6 +77,7 @@ bool ConfigManager::importXml(const String& xml) {
       cfg.wlanMask = attrOrEmpty(wlan, "mask");
       cfg.wlanGateway = attrOrEmpty(wlan, "gateway");
       cfg.wlanDns = attrOrEmpty(wlan, "dns");
+      cfg.wlanPendingTest = parseBool(wlan->Attribute("pendingTest"), cfg.wlanPendingTest);
     }
   }
 
@@ -91,6 +92,7 @@ bool ConfigManager::importXml(const String& xml) {
   if (sensor) {
     cfg.sensorTempOffset = sensor->FloatAttribute("tempOffset", cfg.sensorTempOffset);
     cfg.sensorHumOffset = sensor->FloatAttribute("humOffset", cfg.sensorHumOffset);
+    cfg.sensorCalibratedTs = sensor->UnsignedAttribute("calibratedTs", cfg.sensorCalibratedTs);
   }
 
   const XMLElement* snmp = root->FirstChildElement("snmp");
@@ -119,6 +121,7 @@ String ConfigManager::exportXml() const {
   wlan->SetAttribute("mask", _config.wlanMask.c_str());
   wlan->SetAttribute("gateway", _config.wlanGateway.c_str());
   wlan->SetAttribute("dns", _config.wlanDns.c_str());
+  wlan->SetAttribute("pendingTest", _config.wlanPendingTest ? "true" : "false");
   network->InsertEndChild(wlan);
 
   XMLElement* system = doc.NewElement("system");
@@ -139,6 +142,7 @@ String ConfigManager::exportXml() const {
   XMLElement* sensor = doc.NewElement("sensor");
   sensor->SetAttribute("tempOffset", _config.sensorTempOffset);
   sensor->SetAttribute("humOffset", _config.sensorHumOffset);
+  sensor->SetAttribute("calibratedTs", _config.sensorCalibratedTs);
   root->InsertEndChild(sensor);
 
   XMLElement* snmp = doc.NewElement("snmp");

@@ -47,18 +47,27 @@ Sensormeter-Projekts.
 - OLED SSD1306, 0,96", 128×64, I2C an GPIO21 (SDA) / GPIO22 (SCL) —
   ESP32-Standardbelegung, da kein Ethernet-PHY diese Pins blockiert
   (Unterschied zum Sensormeter-Projekt, siehe `docs/entscheidungen.md`)
+- Kein zusätzliches Bauteil für die Bedienung nötig: der ohnehin auf jedem
+  DevKit vorhandene **BOOT-Taster** (GPIO0) dient zusätzlich als
+  Eingabe — kurzer Tipp blättert manuell durch die OLED-Seiten, langes
+  Halten (3s + 20s Countdown, Auslösung erst beim Loslassen als
+  Fail-Safe) löst einen Werksreset der Einstellungen aus. Der zweite
+  Taster (**EN**) ist reiner Hardware-Reset und lässt sich softwareseitig
+  nicht nutzen.
 
 ## Firmware
 
 `firmware/` ist ein PlatformIO-Projekt (Board `esp32dev`, Framework Arduino).
 
-**Version:** `0.9.0-rc2` (Beta) — Versionsschema siehe
+**Version:** `0.9.0-rc3` (Beta) — Versionsschema siehe
 [docs/entscheidungen.md](docs/entscheidungen.md#versionierung).
 
-Aktueller Stand: **P0–P7 code-vollständig, bauen fehlerfrei, noch nicht auf
-echter Hardware getestet** (siehe
+Aktueller Stand: **P0–P7 code-vollständig, Board-Bringup abgeschlossen** —
+erstes Gerät läuft über mehrere Test-/Update-Zyklen stabil auf echter
+Hardware (DHT22, OLED, WLAN inkl. Fallback-AP, Taster, Webserver, SNMP,
+Syslog alle verifiziert), siehe
 [docs/implementierungsplan.html](docs/implementierungsplan.html) und
-[docs/entscheidungen.md](docs/entscheidungen.md)).
+[docs/entscheidungen.md](docs/entscheidungen.md).
 
 Am schnellsten per PowerShell-Skript einrichten (installiert Python/Git/
 PlatformIO bei Bedarf automatisch, klont/aktualisiert das Repo, baut und
@@ -82,21 +91,32 @@ pio device monitor   # seriellen Log ansehen (115200 Baud)
 Enthalten (P0–P7, siehe [docs/implementierungsplan.html](docs/implementierungsplan.html)):
 - `DataManager`: zentrale, mutex-geschützte Datenhaltung (Sensorwert,
   Systemstatus, 7-Tage-Ringpuffer, Log) — direkt vom Sensormeter-Projekt
-  übernommenes, bewährtes Muster
+  übernommenes, bewährtes Muster; Ringpuffer wird bei jedem Stundenwert
+  nach `/history.csv` auf LittleFS persistiert, übersteht also einen
+  Neustart
 - `NetworkManager`: Boot-Zustandsautomat (BOOT → INIT → WLAN_CHECK →
-  RUN_NORMAL/FALLBACK_MODE), WLAN-Verbindungsaufbau
+  RUN_NORMAL/FALLBACK_MODE), WLAN-Verbindungsaufbau; im Fallback-Fall
+  spannt das Gerät einen eigenen Access Point auf (SSID/PSK `installer`,
+  DHCP, nur eigene IP + Subnetzmaske), statt einem bestehenden Netz
+  beizutreten; mDNS unter `<systemname>.local`
 - `TimeManager`: NTP-Sync (de.pool.ntp.org, CET/CEST), erster Versuch 60s
   nach Boot, danach alle 5h, zusätzlich bei WLAN-Reconnect; ohne Erfolg
   Wiederholung alle 5 Minuten, kein Einfluss auf den Systemzustand
 - `ConfigManager`: `config.xml` auf LittleFS (tinyxml2, vendored),
   Laden/Speichern mit Default-Fallback, XML-Import/-Export, sicheres
-  Schreiben über `.tmp`-Datei + Rename
+  Schreiben über `.tmp`-Datei + Rename; Werksreset (nur Einstellungen oder
+  Einstellungen + Verlaufsdaten) über die Einstellungsseite
 - `StorageManager`: LittleFS-Mount
 - `SensorManager`: DHT22-Abfrage alle 60s mit Plausibilitätsprüfung, konfigurierbare
-  Kalibrierkorrektur (°C/%, wirkt auf Anzeige, SNMP und CSV gleichermaßen)
-- `DisplayManager`: OLED SSD1306, Boot-Countdown + 5 rotierende Infoseiten
+  Kalibrierkorrektur (°C/%, wirkt auf Anzeige, SNMP und CSV gleichermaßen),
+  Zeitpunkt der letzten Kalibrierung wird persistent mitgeführt
+- `DisplayManager`: OLED SSD1306, Boot-Countdown + 6 rotierende Infoseiten,
+  zentrierte Darstellung mit fester, größerer Schrift - zu lange Zeilen
+  (z.B. lange WLAN-SSIDs) laufen waagerecht durch statt zu schrumpfen;
+  BOOT-Taster zusätzlich als Bedienelement (Seitenwechsel/Werksreset)
 - `WebServerManager`/`OtaManager`: Hauptseite, passwortgeschützte
-  Einstellungsseite (inkl. Sensor-Kalibrierkorrektur), REST-API, lokales
+  Einstellungsseite (inkl. Sensor-Kalibrierkorrektur, nicht-blockierendem
+  WLAN-Scan mit Direktverbindung-und-Test, Werksreset), REST-API, lokales
   OTA per `.bin`-Upload, Design an das Sensormeter-Display-Projekt angepasst
 - `SNMPManager`: SNMP v1/v2c read-only unter `.1.3.6.1.4.1.99999.x`
 - `SyslogManager`: Statusreport je Sensorzyklus + sofortige Fehler-Events per UDP 514
@@ -112,10 +132,10 @@ keine eigene `partitions.csv` nötig (siehe `docs/entscheidungen.md`).
   Sensormeter-Display-Projekt kann damit Geräte aus beiden Produktlinien
   ohne Codeänderung abfragen.
 - Fallback-WLAN-Konvention `installer`/`installer` wie beim
-  Sensormeter-Projekt übernommen — in beiden Projekten aktuell als
-  WLAN-Client-Beitritt statt als eigener Access Point umgesetzt (bekannte
-  Abweichung von der ursprünglichen Spezifikation, siehe
-  `docs/entscheidungen.md` und `docs/admin-guide.pdf` Abschnitt 2.2).
+  Sensormeter-Projekt übernommen — hier bereits als echter, selbst
+  aufgespannter Access Point umgesetzt (DHCP, nur eigene IP + Subnetzmaske);
+  das Sensormeter-Projekt (WT32-ETH01) joint stattdessen noch ein
+  bestehendes Netz mit diesem Namen, siehe `docs/entscheidungen.md`.
 
 ## Über dieses Projekt
 

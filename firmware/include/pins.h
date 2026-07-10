@@ -13,6 +13,13 @@
 #define DHT_PIN 4
 #define DHT_TYPE DHT22
 
-// Bewusst vermiedene Pins (Boot-Strapping bzw. intern am Flash):
-// GPIO0, GPIO2, GPIO5, GPIO12, GPIO15 (Strapping), GPIO6-11 (internes
-// Flash-SPI, auf DevKits nicht herausgefuehrt). Siehe entscheidungen.md.
+// --- Taster: der bereits auf jedem ESP32-DevKit vorhandene BOOT-Knopf,
+// kein zusaetzliches Bauteil noetig. Nach dem Booten ganz normal als
+// Eingang lesbar (aktiv LOW, interner Pullup) - nur waehrend eines Resets
+// beeinflusst sein Zustand den Bootmodus, siehe DisplayManager.h. ---
+#define BUTTON_BOOT_PIN 0
+
+// Bewusst vermiedene Pins fuer NEUE Peripherie (Boot-Strapping bzw. intern
+// am Flash): GPIO0 (siehe oben, hier als bestehender Taster erlaubt), GPIO2,
+// GPIO5, GPIO12, GPIO15 (Strapping), GPIO6-11 (internes Flash-SPI, auf
+// DevKits nicht herausgefuehrt). Siehe entscheidungen.md.

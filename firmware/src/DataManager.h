@@ -45,14 +45,25 @@ class DataManager {
   SensorReading getSensor();
   void setSensor(const SensorReading& reading);
 
+  // pushHourValue() persistiert bei jedem Aufruf (1x/Stunde) nach
+  // /history.csv auf LittleFS, damit der 7-Tage-Verlauf einen Neustart
+  // uebersteht - vernachlaessigbarer Flash-Verschleiss bei stuendlicher
+  // Schreibfrequenz (siehe docs/entscheidungen.md, Vorbild: Sensormeter-
+  // Projekt).
   void pushHourValue(const HourValue& value);
   size_t getRingbuffer(HourValue* out, size_t maxCount);
+
+  // Muss erst NACH StorageManager::begin() (LittleFS-Mount) aufgerufen
+  // werden - main.cpp ruft dataManager.begin() bewusst frueher auf.
+  void loadRingbuffer();
 
   void pushLogEntry(const String& message, int severity = 6);
   size_t getLogEntries(LogEntry* out, size_t maxCount);  // neueste zuerst
   size_t getLogEntriesAfter(unsigned long afterSequence, LogEntry* out, size_t maxCount);
 
  private:
+  void saveRingbuffer();
+
   SemaphoreHandle_t _mutex = nullptr;
 
   SystemState _systemState = SystemState::BOOT;

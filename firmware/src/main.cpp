@@ -17,6 +17,7 @@
 // ============================================================================
 
 #include <Arduino.h>
+#include <ESPmDNS.h>
 
 #include "ConfigManager.h"
 #include "DataManager.h"
@@ -61,6 +62,7 @@ void setup() {
   dataManager.setSystemState(SystemState::BOOT);
 
   storageManager.begin();
+  dataManager.loadRingbuffer();
   configManager.begin();
   timeManager.begin();
   sensorManager.begin();
@@ -79,5 +81,20 @@ void loop() {
   displayManager.loop();
   snmpManager.loop();
   syslogManager.loop();
+
+  // Einmaliger mDNS-Start, sobald eine WLAN-IP vorliegt (auch im Fallback-
+  // Netz "installer") - vor RUN_NORMAL ist noch keine IP vergeben.
+  static bool mdnsStarted = false;
+  if (!mdnsStarted && networkManager.isWlanUp()) {
+    String hostname = NetworkManager::sanitizeHostname(configManager.getConfig().systemName);
+    if (MDNS.begin(hostname.c_str())) {
+      MDNS.addService("http", "tcp", 80);
+      Serial.printf("[NET] mDNS gestartet: http://%s.local/\n", hostname.c_str());
+    } else {
+      Serial.println("[NET] mDNS-Start fehlgeschlagen");
+    }
+    mdnsStarted = true;
+  }
+
   delay(50);
 }

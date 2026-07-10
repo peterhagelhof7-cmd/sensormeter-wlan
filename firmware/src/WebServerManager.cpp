@@ -1,6 +1,7 @@
 #include "WebServerManager.h"
 
 #include <ArduinoJson.h>
+#include <LittleFS.h>
 #include <Update.h>
 #include <esp_timer.h>
 #include <time.h>
@@ -16,6 +17,19 @@
 // Netzwerkzugriff - daher unproblematisch ohne HTTPS-Client (siehe
 // docs/entscheidungen.md, Vorbild Sensormeter-Projekt).
 #define GITHUB_REPO_SLUG "peterhagelhof7-cmd/sensormeter-wlan"
+
+namespace {
+String formatCalibratedTs(uint32_t ts) {
+  if (ts == 0) return "noch nie";
+  time_t t = static_cast<time_t>(ts);
+  struct tm tmv;
+  localtime_r(&t, &tmv);
+  char buf[20];
+  snprintf(buf, sizeof(buf), "%02d.%02d.%04d %02d:%02d", tmv.tm_mday, tmv.tm_mon + 1, tmv.tm_year + 1900,
+           tmv.tm_hour, tmv.tm_min);
+  return String(buf);
+}
+}  // namespace
 
 WebServerManager::WebServerManager(DataManager& dataManager, ConfigManager& configManager,
                                     NetworkManager& networkManager, OtaManager& otaManager,
@@ -64,6 +78,7 @@ String WebServerManager::buildPageShell(const String& title, const String& bodyC
   html += ".block h2{font-size:14px;color:#8f4a1e;margin:0 0 10px;padding-bottom:6px;"
           "border-bottom:2px solid #c8622a;text-transform:uppercase;letter-spacing:.04em;}";
   html += ".row{display:flex;justify-content:space-between;gap:16px;margin:8px 0;text-align:left;font-size:15px;}";
+  html += "p.hint{font-size:12.5px;color:#6b6559;text-align:left;margin:6px 0;}";
   html += "button,input[type=submit]{background:#c8622a;color:#fff;border:none;padding:9px 18px;"
           "font-size:14px;font-weight:600;border-radius:4px;cursor:pointer;margin:8px;}";
   html += "button:hover,input[type=submit]:hover{opacity:.9;}";
@@ -162,8 +177,12 @@ String WebServerManager::buildSettingsPageBody() const {
   html += "<div class=\"block\"><h2>WLAN</h2>";
   html += "<label><input type=\"checkbox\" name=\"wlanDhcp\" " + String(cfg.wlanDhcp ? "checked" : "") + "> DHCP</label>";
   html += "<label>SSID<input type=\"text\" name=\"wlanSsid\" id=\"wlanSsid\" value=\"" + cfg.wlanSsid + "\"></label>";
-  html += "<button type=\"button\" onclick=\"scanWifi()\">SSIDs suchen</button><div id=\"scanResult\"></div>";
-  html += "<label>PSK<input type=\"password\" name=\"wlanPsk\" value=\"" + cfg.wlanPsk + "\"></label>";
+  html += "<button type=\"button\" onclick=\"scanWifi()\">SSIDs suchen (bis 20s)</button><div id=\"scanResult\"></div>";
+  html += "<label>PSK<input type=\"password\" name=\"wlanPsk\" id=\"wlanPsk\" value=\"" + cfg.wlanPsk + "\"></label>";
+  html += "<button type=\"button\" onclick=\"connectWifi()\">Verbinden &amp; testen (Neustart)</button> "
+          "<span id=\"connectStatus\"></span>";
+  html += "<p class=\"hint\">Speichert nur SSID/PSK, startet sofort neu und probiert die Verbindung fuer 30s - "
+          "gelingt es nicht, faellt das Geraet automatisch zurueck auf den eigenen Access-Point \"installer\".</p>";
   html += "<label>IP<input type=\"text\" name=\"wlanIp\" value=\"" + cfg.wlanIp + "\"></label>";
   html += "<label>Netzmaske<input type=\"text\" name=\"wlanMask\" value=\"" + cfg.wlanMask + "\"></label>";
   html += "<label>Gateway<input type=\"text\" name=\"wlanGateway\" value=\"" + cfg.wlanGateway + "\"></label>";
@@ -175,6 +194,8 @@ String WebServerManager::buildSettingsPageBody() const {
           String(cfg.sensorTempOffset, 1) + "\"></label>";
   html += "<label>Korrektur Feuchte (%)<input type=\"text\" name=\"sensorHumOffset\" value=\"" +
           String(cfg.sensorHumOffset, 1) + "\"></label>";
+  html += "<div class=\"row\"><span>Zuletzt kalibriert</span><span>" +
+          formatCalibratedTs(cfg.sensorCalibratedTs) + "</span></div>";
   html += "</div>";
 
   html += "<div class=\"block\"><h2>Syslog</h2>";
@@ -192,7 +213,18 @@ String WebServerManager::buildSettingsPageBody() const {
   html += "<a href=\"/api/config/export\"><button type=\"button\">XML Export</button></a>";
   html += "<form method=\"POST\" action=\"/api/config/import\" enctype=\"multipart/form-data\">";
   html += "<input type=\"file\" name=\"file\" accept=\".xml\"><input type=\"submit\" value=\"XML Import\">";
-  html += "</form></div>";
+  html += "</form>";
+  html += "<form method=\"POST\" action=\"/api/factory-reset\" "
+          "onsubmit=\"return confirm('Wirklich alle Einstellungen auf Werkszustand zuruecksetzen? "
+          "WLAN-Zugangsdaten, Kalibrierung etc. gehen verloren.')\">";
+  html += "<input type=\"hidden\" name=\"scope\" value=\"settings\">";
+  html += "<input type=\"submit\" value=\"Werksreset (nur Einstellungen)\"></form>";
+  html += "<form method=\"POST\" action=\"/api/factory-reset\" "
+          "onsubmit=\"return confirm('Wirklich Einstellungen UND den gespeicherten Verlauf loeschen? "
+          "Das laesst sich nicht rueckgaengig machen.')\">";
+  html += "<input type=\"hidden\" name=\"scope\" value=\"all\">";
+  html += "<input type=\"submit\" value=\"Werksreset (Einstellungen + Daten)\"></form>";
+  html += "</div>";
 
   html += "<div class=\"block\"><h2>Firmware</h2>";
   html += "<form method=\"POST\" action=\"/api/ota/upload\" enctype=\"multipart/form-data\">";
@@ -205,9 +237,25 @@ String WebServerManager::buildSettingsPageBody() const {
   html += "<input type=\"submit\" value=\"Reboot\"></form></div>";
 
   html += "<script>";
-  html += "function scanWifi(){fetch('/api/wifi/scan').then(r=>r.json()).then(d=>{";
-  html += "document.getElementById('scanResult').innerHTML=d.networks.map(n=>";
-  html += "`<div onclick=\"document.getElementById('wlanSsid').value='${n.ssid}'\">${n.ssid} (${n.rssi} dBm)</div>`).join('');});}";
+  // Nicht-blockierender Scan: pollt /api/wifi/scan alle 1,5s (bis zu ~20s),
+  // bis der Server "done" meldet - siehe handleApiWifiScan()/Klassenkommentar.
+  html += "function scanWifi(){"
+          "document.getElementById('scanResult').innerText='Suche laeuft...';"
+          "let tries=0;"
+          "const poll=()=>{fetch('/api/wifi/scan').then(r=>r.json()).then(d=>{"
+          "if(d.status==='done'){"
+          "document.getElementById('scanResult').innerHTML=d.networks.length?d.networks.map(n=>"
+          "`<div onclick=\"document.getElementById('wlanSsid').value='${n.ssid}'\">${n.ssid} (${n.rssi} dBm)</div>`).join(''):"
+          "'Keine Netzwerke gefunden.';"
+          "}else if(tries++<13){setTimeout(poll,1500);}"
+          "else{document.getElementById('scanResult').innerText='Timeout bei der Suche.';}"
+          "});};"
+          "poll();}";
+  html += "function connectWifi(){"
+          "const body=new URLSearchParams({wlanSsid:document.getElementById('wlanSsid').value,"
+          "wlanPsk:document.getElementById('wlanPsk').value});"
+          "document.getElementById('connectStatus').innerText='Verbinde, Geraet startet neu...';"
+          "fetch('/api/wifi/connect',{method:'POST',body});}";
   html += "</script>";
 
   return html;
@@ -351,6 +399,7 @@ void WebServerManager::handleApiConfigGet(AsyncWebServerRequest* request) {
   doc["wlanDns"] = cfg.wlanDns;
   doc["sensorTempOffset"] = cfg.sensorTempOffset;
   doc["sensorHumOffset"] = cfg.sensorHumOffset;
+  doc["sensorCalibratedTs"] = cfg.sensorCalibratedTs;
   doc["syslogServer"] = cfg.syslogServer;
   doc["snmpCommunity"] = cfg.snmpCommunity;
 
@@ -378,11 +427,21 @@ void WebServerManager::handleApiConfigPost(AsyncWebServerRequest* request) {
   if (request->hasParam("wlanGateway", true)) cfg.wlanGateway = request->getParam("wlanGateway", true)->value();
   if (request->hasParam("wlanDns", true)) cfg.wlanDns = request->getParam("wlanDns", true)->value();
 
+  // Alte Offsets merken, um "zuletzt kalibriert" NUR bei einer tatsaechlichen
+  // Aenderung zu aktualisieren - dieses Formular wird bei jedem Speichern der
+  // Einstellungsseite abgeschickt, nicht nur bei einer Kalibrierung.
+  float oldSensorTempOffset = cfg.sensorTempOffset;
+  float oldSensorHumOffset = cfg.sensorHumOffset;
+
   if (request->hasParam("sensorTempOffset", true)) {
     cfg.sensorTempOffset = request->getParam("sensorTempOffset", true)->value().toFloat();
   }
   if (request->hasParam("sensorHumOffset", true)) {
     cfg.sensorHumOffset = request->getParam("sensorHumOffset", true)->value().toFloat();
+  }
+
+  if (cfg.sensorTempOffset != oldSensorTempOffset || cfg.sensorHumOffset != oldSensorHumOffset) {
+    cfg.sensorCalibratedTs = static_cast<uint32_t>(time(nullptr));
   }
 
   if (request->hasParam("syslogServer", true)) cfg.syslogServer = request->getParam("syslogServer", true)->value();
@@ -434,10 +493,30 @@ void WebServerManager::handleApiReboot(AsyncWebServerRequest* request) {
 void WebServerManager::handleApiWifiScan(AsyncWebServerRequest* request) {
   if (!checkAuth(request)) return;
 
-  int n = WiFi.scanNetworks();  // blockierend, siehe Klassenkommentar
+  // Nicht-blockierend (siehe Klassenkommentar): WiFi.scanComplete() liefert
+  // WIFI_SCAN_FAILED (-2), solange kein Scan laeuft oder noch keiner
+  // gestartet wurde -> in diesem Fall einen neuen asynchronen Scan anstossen
+  // und sofort mit "started" antworten. Die Seite pollt diesen Endpunkt
+  // anschliessend alle ~1,5s (bis zu ~20s), bis "done" mit den Ergebnissen
+  // zurueckkommt. WiFi.scanNetworks(true) aktiviert dafuer intern kurz STA
+  // zusaetzlich zum laufenden Fallback-AP (WIFI_MODE_AP_STA), ohne den AP
+  // selbst zu unterbrechen.
+  int result = WiFi.scanComplete();
+
+  if (result == WIFI_SCAN_RUNNING) {
+    request->send(200, "application/json", "{\"status\":\"running\"}");
+    return;
+  }
+  if (result == WIFI_SCAN_FAILED) {
+    WiFi.scanNetworks(true);
+    request->send(200, "application/json", "{\"status\":\"started\"}");
+    return;
+  }
+
   JsonDocument doc;
+  doc["status"] = "done";
   JsonArray networks = doc["networks"].to<JsonArray>();
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < result; i++) {
     JsonObject o = networks.add<JsonObject>();
     o["ssid"] = WiFi.SSID(i);
     o["rssi"] = WiFi.RSSI(i);
@@ -447,6 +526,39 @@ void WebServerManager::handleApiWifiScan(AsyncWebServerRequest* request) {
   String out;
   serializeJson(doc, out);
   request->send(200, "application/json", out);
+}
+
+void WebServerManager::handleApiWifiConnect(AsyncWebServerRequest* request) {
+  if (!checkAuth(request)) return;
+
+  DeviceConfig cfg = _config.getConfig();
+  if (request->hasParam("wlanSsid", true)) cfg.wlanSsid = request->getParam("wlanSsid", true)->value();
+  if (request->hasParam("wlanPsk", true)) cfg.wlanPsk = request->getParam("wlanPsk", true)->value();
+  cfg.wlanPendingTest = true;
+  _config.setConfig(cfg);
+  _data.pushLogEntry("Neues WLAN \"" + cfg.wlanSsid + "\" gespeichert, starte neu zum Verbindungstest");
+
+  request->send(200, "text/plain", "Gespeichert, Geraet startet neu ...");
+  delay(500);
+  ESP.restart();
+}
+
+void WebServerManager::handleApiFactoryReset(AsyncWebServerRequest* request) {
+  if (!checkAuth(request)) return;
+
+  String scope = request->hasParam("scope", true) ? request->getParam("scope", true)->value() : "settings";
+  _config.setConfig(DeviceConfig());  // Defaults - setConfig() speichert sofort nach config.xml
+
+  if (scope == "all") {
+    LittleFS.remove("/history.csv");
+    _data.pushLogEntry("Werksreset: Einstellungen und Verlaufsdaten geloescht", 3);
+  } else {
+    _data.pushLogEntry("Werksreset: Einstellungen auf Standardwerte zurueckgesetzt", 3);
+  }
+
+  request->send(200, "text/plain", "Zurueckgesetzt, Geraet startet neu ...");
+  delay(500);
+  ESP.restart();
 }
 
 // ----------------------------------------------------------------------------
@@ -476,6 +588,8 @@ void WebServerManager::begin() {
 
   _server.on("/api/reboot", HTTP_POST, [this](AsyncWebServerRequest* r) { handleApiReboot(r); });
   _server.on("/api/wifi/scan", HTTP_GET, [this](AsyncWebServerRequest* r) { handleApiWifiScan(r); });
+  _server.on("/api/wifi/connect", HTTP_POST, [this](AsyncWebServerRequest* r) { handleApiWifiConnect(r); });
+  _server.on("/api/factory-reset", HTTP_POST, [this](AsyncWebServerRequest* r) { handleApiFactoryReset(r); });
 
   _server.on(
       "/api/ota/upload", HTTP_POST,

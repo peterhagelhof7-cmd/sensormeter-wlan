@@ -211,6 +211,12 @@ echter SoftAP-Fix (`WiFi.softAP("installer","installer")` statt
 `WiFi.begin(...)`) ist für eine spätere Runde vorgemerkt - betrifft
 potenziell auch das Sensormeter-Projekt.
 
+**Update 2026-07-10: gefixt.** Siehe „Fallback-Access-Point ist jetzt ein
+echter SoftAP" weiter unten - `NetworkManager` spannt im Fallback-Fall
+tatsächlich ein eigenes Netz auf, statt eines beizutreten. Das
+Sensormeter-Projekt (WT32-ETH01) hat den Fix noch nicht erhalten, betrifft
+also weiterhin nur dieses Projekt hier.
+
 ## Gefixt: DNS-Server bei statischer WLAN-IP fehlte komplett
 
 Beim Beantworten einer Nutzerfrage ("welchen DNS nutzt Sensormeter WLAN im
@@ -237,14 +243,9 @@ Projekten in diesem Punkt.
 
 ## Noch offen / nicht Teil dieser Runde
 
-- Firmware (P0-P7) ist code-vollständig und für jede Phase per `pio run`
-  fehlerfrei gebaut worden, aber **noch auf keiner realen Hardware
-  getestet** - die bestellten ESP32-WROOM-32-Boards sind zum Zeitpunkt
-  dieser Runde noch nicht geliefert. Insbesondere ungetestet: DHT22-Timing
-  auf echtem GPIO4, SSD1306-I2C-Ansprache, WLAN-Fallback-AP-Übergang nach
-  5 Minuten, SNMP-Antworten gegen einen echten Client (Sensormeter-Display),
-  Syslog-Empfang auf einem echten Server, OTA-Upload-Flow über die
-  Einstellungsseite.
+- **Update 2026-07-10:** Erstes ESP32-WROOM-32-Board erhalten und per USB
+  gegen die reale Firmware getestet (siehe „Erststart auf echter Hardware"
+  unten) - der Hardware-Test-Vorbehalt oben ist damit erledigt.
 - Exaktes Strombudget/Netzteilempfehlung noch nicht im Detail berechnet
   (siehe `stueckliste.md`) - sinnvoll erst nach Praxistest von
   Display-Helligkeit/WLAN-Sendeverhalten auf echter Hardware
@@ -353,3 +354,219 @@ ebenfalls aktualisiert und neu als PDF exportiert.
 
 Mit `pio run` neu gebaut zur Verifikation nach den Doku-Änderungen (Code
 selbst unverändert seit dem letzten Build).
+
+## Erststart auf echter Hardware
+
+Erstes ESP32-WROOM-32-Board per USB (COM5) angeschlossen und über
+`scripts/flash.ps1`-Vorgehen (`pio run --target upload`) geflasht - erster
+echter Boot-/Feldtest dieser Firmware überhaupt. DHT22, SSD1306-OLED,
+WLAN-Verbindungsaufbau, Webserver, SNMP-Agent und LittleFS-Persistenz
+funktionierten beim Erststart wie erwartet. Alle folgenden Einträge in
+diesem Abschnitt entstanden im direkten Test-Zyklus (Ändern → `pio run
+--target upload` → `pio device monitor` zur Verifikation) an diesem Board.
+
+## 7-Tage-Verlauf jetzt tatsächlich persistent
+
+`DataManager::pushHourValue()` hielt den Ringpuffer bisher nur im RAM - ein
+Neustart löschte den gesamten 7-Tage-Verlauf, obwohl `WebServerManager`
+ihn bereits als Graph/CSV auslieferte. Neu: `saveRingbuffer()` schreibt bei
+jedem stündlichen Eintrag den kompletten Puffer nach `/history.csv` auf
+LittleFS (CSV: Zeitstempel, Temperatur, Feuchte), `loadRingbuffer()` liest
+ihn beim Boot zurück - muss nach `StorageManager::begin()` (LittleFS-Mount)
+aufgerufen werden, nicht schon in `DataManager::begin()`, da dessen Mutex
+vor allen anderen Modulen initialisiert werden muss. Stündliche
+Schreibfrequenz ist vernachlaessigbarer Flash-Verschleiss.
+
+## mDNS ergänzt
+
+Gerät jetzt unter `<systemname>.local` statt nur per IP erreichbar. Der
+frei eingebbare Systemname wird dafür sanitisiert (Kleinschreibung, nur
+a-z/0-9/-, siehe `NetworkManager::sanitizeHostname()`) - dieselbe Funktion
+setzt jetzt auch `WiFi.setHostname()`, was vorher gar nicht gesetzt wurde.
+mDNS startet erst, sobald irgendein WLAN-Interface eine IP hat (regulär
+oder Fallback-AP).
+
+## Kalibrier-Zeitstempel jetzt persistent
+
+`DeviceConfig` bekam `sensorCalibratedTs` (Unix-Zeitstempel der letzten
+tatsächlichen Änderung der Korrekturwerte, nicht jedes Speichern der
+Einstellungsseite - Vergleich alt/neu vor dem Setzen). Persistiert als
+`calibratedTs`-Attribut in `<sensor>`, auf der Einstellungsseite als
+"Zuletzt kalibriert: TT.MM.JJJJ HH:MM" angezeigt.
+
+## Fallback-Access-Point ist jetzt ein echter SoftAP
+
+Löst die oben dokumentierte „Bekannte Abweichung" auf. `NetworkManager`
+ruft im Fallback-Fall jetzt `WiFi.softAPConfig(192.168.4.1, 192.168.4.1,
+255.255.255.0)` + `WiFi.softAP("installer", "installer")` auf, statt
+`WiFi.begin("installer", "installer")` (Beitritt zu einem fremden Netz).
+Bewusst nur eigene IP + Subnetzmaske konfiguriert, kein Gateway/DNS - der
+AP leitet nicht ins Internet weiter, das wäre irreführend. DHCP-Server
+läuft automatisch (ESP32-Arduino-Core startet ihn implizit mit
+`WiFi.softAP()`, kein eigener Code nötig).
+
+`isWlanUp()`/`isUsingFallbackWlan()`/`getWlanIp()`/`getWlanGateway()`/
+`getWlanSsid()` unterscheiden jetzt intern, ob der STA- oder der AP-Zweig
+aktiv ist. Das OLED zeigt im Fallback-Fall ausschließlich "Fallback aktiv"
++ die eigene IP (keine Seitenrotation - die wäre hier nur ablenkend, siehe
+`DisplayManager::drawFallbackIpPage()`).
+
+## WLAN-Scan blockierte den Async-Webserver-Task - Gerät stürzte im Fallback-AP ab
+
+Beim ersten Test des Scan-Buttons auf der Einstellungsseite (während das
+Gerät als Fallback-AP lief) startete das Gerät jedes Mal neu und die
+Verbindung riss ab. Ursache: `WiFi.scanNetworks()` ist standardmäßig
+blockierend (mehrere Sekunden) und wurde direkt im
+AsyncWebServer-Request-Handler aufgerufen - das blockiert den
+Async-TCP-Task, der eigentlich schnell zurückkehren muss, und der
+notwendige interne Wechsel auf `WIFI_MODE_AP_STA` während ein Client am
+Fallback-AP hängt, hat die Verbindung zusätzlich gestört.
+
+**Fix:** `WiFi.scanNetworks(true)` (asynchron, kehrt sofort zurück).
+`/api/wifi/scan` liefert je nach `WiFi.scanComplete()`-Status
+`{"status":"started"|"running"|"done", networks:[...]}` zurück, die
+Einstellungsseite pollt das per JavaScript alle 1,5s für bis zu ~20s.
+
+## WLAN aus dem Fallback-AP heraus einrichten: "Verbinden & testen"
+
+Damit sich der eben gefixte Fallback-AP auch tatsächlich zur Ersteinrichtung
+nutzen lässt: neuer Button auf der Einstellungsseite speichert SSID/PSK,
+setzt `DeviceConfig::wlanPendingTest` und startet sofort neu
+(`/api/wifi/connect`). `NetworkManager::begin()` liest dieses Flag beim
+nächsten Boot, löscht es sofort wieder (gilt nur für genau einen
+Boot-Versuch) und wartet dann nur `WLAN_TEST_TIMEOUT_MS` (30s) statt der
+regulären 5 Minuten, bevor es bei Misserfolg zurück in den Fallback-AP
+fällt - schnelles Feedback statt langer Wartezeit nach einer bewussten
+Nutzeraktion.
+
+## Werksreset ergänzt
+
+Neue Einstellungsseiten-Buttons (Bereich "Konfiguration"), je mit
+Bestätigungsdialog: "nur Einstellungen" setzt `config.xml` per
+`ConfigManager::setConfig(DeviceConfig())` auf Defaults zurück, "Einstellungen
++ Daten" löscht zusätzlich `/history.csv`. Beide starten danach neu
+(`/api/factory-reset`, Formularfeld `scope=settings|all`). Praktischer
+Auslöser: die WLAN-Zugangsdaten ließen sich sonst nur per komplettem
+Flash-Erase über USB zurücksetzen, um den Fallback-Flow erneut zu testen.
+
+## OLED-Anzeige überarbeitet: zentriert, feste größere Schrift, Scroll statt Schrumpfen
+
+Mehrere Nutzerwünsche in Folge, alle in `DisplayManager`:
+
+- Boot-Countdown zeigt jetzt 3 Zeilen ("Sensormeter" / "WLAN" / Countdown +
+  "warte") statt bisher 2 (kompletter Systemname + nackte Zahl), jede
+  Zeile mit eigener größtmöglicher Schriftgröße.
+- Die "Systemname"-Seite der Seitenrotation zeigt jetzt dieselbe feste
+  Marke/Typ-Kennzeichnung ("Sensormeter" / "WLAN", zentriert) statt des
+  frei editierbaren Systemnamens - der ist bereits auf der Weboberfläche
+  prominent sichtbar.
+- WLAN-Info-Seite zeigt jetzt SSID (Zeile 1) + IP (Zeile 2) statt nur der
+  IP.
+- Status-Seite bekam eine dritte Zeile mit dem Systemtyp ("Sensormeter
+  WLAN", identisch zum SNMP-OID `.1.3.6.1.4.1.99999.1.3.0`).
+- Alle Seiten sind jetzt horizontal UND vertikal zentriert (vorher
+  linksbündig) und nutzen einheitlich eine feste, bewusst größere
+  Schriftgröße (2), statt sie an die jeweils längste Zeile anzupassen.
+  Passt eine Zeile dabei nicht auf einmal (z.B. eine lange WLAN-SSID, WLAN-
+  SSIDs dürfen bis zu 32 Zeichen haben), läuft sie waagerecht durch, bis
+  sie komplett zu lesen war, statt die Schrift für alle Zeilen zu
+  schrumpfen - synchronisiert auf den 10s-Seitenwechsel-Timer (einmal
+  durchlaufen, dann am Ende halten). Die Fallback-Seite hat keine feste
+  Wechsel-Deadline und scrollt daher stattdessen dauerhaft wiederholend.
+- Nebenbei ein latenter Absturzpfad behoben: die alte
+  Schriftgrößen-Berechnung rundete bei sehr langen Zeilen (>21 Zeichen bei
+  Schriftgröße 1) per Integer-Division auf Größe 0 herunter, wurde von
+  einer `max(1, ...)`-Klammer wieder auf Größe 1 hochgezwungen - obwohl
+  selbst Größe 1 dann nicht mehr gepasst hätte - und hätte automatisch
+  umgebrochen und die nächste Zeile überlagert.
+- Zwei Iterationen später (Nutzerfeedback nach echtem Testen):
+  "Systemname"-Seite zeigt wieder den frei editierbaren Namen statt der
+  festen Marke/Typ-Kennzeichnung (die bleibt auf Status-Seite/Boot-Screen
+  bestehen) - reagiert also wieder auf Änderungen über die Weboberfläche.
+  Zusätzlich neue sechste Seite "WLAN-Signal" (RSSI in dBm,
+  `NetworkManager::getWlanRssi()`).
+
+## BOOT-Taster als Seiten-Navigation + Werksreset-Ausloeser genutzt
+
+Generische ESP32-WROOM-32-DevKits bringen zwei Taster fest auf dem Board
+mit: **EN** (Chip-Enable/Reset) und **BOOT** (GPIO0, für den
+Flash-Modus). Beide sind in der ursprünglichen Pinbelegung
+(`pins.h`) nicht als nutzbare Eingänge vorgesehen - `EN` ist reine
+Hardware und **kann softwareseitig gar nicht abgefangen werden** (ein
+Druck reißt den Chip einfach in einen Reset, ganz unabhängig vom
+laufenden Programm). `BOOT`/GPIO0 ist dagegen nach dem Hochfahren ganz
+normal als Eingang lesbar (`INPUT_PULLUP`, aktiv LOW) - nur der Pegel
+*im Moment eines Resets* beeinflusst den Bootmodus (gehalten = Flash-
+Modus), im laufenden Betrieb spielt das keine Rolle mehr. Sehr verbreitete
+Praxis bei ESP32-Hobbyprojekten, diesen Taster zusätzlich als
+"User-Button" zu verwenden - kein zusätzliches Bauteil nötig.
+
+**Umsetzung** (`DisplayManager::handleButton()`, aufgerufen mit Vorrang
+vor jeder anderen Anzeigelogik in `loop()`, funktioniert also auch
+während BOOT/INIT/WLAN_CHECK und im Fallback-Modus):
+
+- **Kurzer Tipp** (≥50ms Entprellung, <3s gehalten): schaltet manuell zur
+  nächsten Seite der Rotation, setzt auch den Seiten-/Scroll-Timer zurück.
+- **≥3s gehalten**: OLED zeigt "Werksreset?" mit einem von 20 auf 0
+  herunterzählenden Sekunden-Countdown.
+- **Fail-Safe gegen einen verklemmten/defekten Taster:** Der eigentliche
+  Reset wird bewusst **nicht** automatisch ausgelöst, sobald der
+  Countdown abgelaufen ist, sondern erst beim tatsächlichen **Loslassen**
+  danach (Anzeige wechselt währenddessen auf "Loslassen zum
+  Bestätigen"). Bleibt der Taster durchgehend gedrückt (z.B. durch einen
+  mechanischen Defekt), passiert dadurch nie ein Reset - es braucht ein
+  echtes Loslassen-Ereignis, das ein dauerhaft geschlossener Kontakt nie
+  liefert.
+- Der ausgelöste Reset ist bewusst der Umfang "nur Einstellungen"
+  (`ConfigManager::setConfig(DeviceConfig())`, identisch zum
+  gleichnamigen Button auf der Einstellungsseite) - der 7-Tage-Verlauf
+  bleibt erhalten. Auslöser für dieses Feature: WLAN-Zugangsdaten ließen
+  sich bis dahin nur per komplettem Flash-Erase über USB zurücksetzen,
+  wenn das Gerät wegen falscher Zugangsdaten gar nicht mehr erreichbar
+  war - jetzt geht das auch rein über den Taster, ganz ohne PC/USB.
+
+`pins.h` bekam dafür `BUTTON_BOOT_PIN` (= 0) als benannte Konstante, mit
+Kommentar, dass dies bewusst die eine Ausnahme von der sonst geltenden
+"GPIO0 meiden"-Regel für neue Peripherie ist (die Regel gilt für neu
+angeschlossene Bauteile, nicht für den ohnehin vorhandenen Taster).
+
+**Nachtrag (Board-Fotos geprüft):** Die Produktfotos des verwendeten
+DevKits im Projektordner (`*.jpg`) beschriften auf einer der
+Herstellergrafiken **beide** Taster fälschlich mit "Boot" (Copy-Paste-
+Fehler in der Marketinggrafik) - maßgeblich ist der tatsächliche
+Silkscreen-Aufdruck auf der Platine selbst ("Boot" links neben dem
+USB-C-Anschluss, "EN" rechts daneben, bestätigt auf den Detailfotos),
+der die ursprüngliche Zuordnung (BOOT = GPIO0, softwareseitig nutzbar;
+EN = reiner Hardware-Reset) bestätigt. Werden beide Taster zusammen
+gedrückt und EN zuerst losgelassen (oder generell EN losgelassen,
+während GPIO0/BOOT weiterhin auf LOW gehalten wird), sampelt der Chip
+GPIO0 beim Reset als LOW und wechselt in den seriellen Flash-/Bootloader-
+Modus statt normal zu starten - das Gerät bleibt dann scheinbar
+reaktionslos (OLED dunkel, kein WLAN), bis entweder ein erneuter Reset
+mit losgelassenem BOOT erfolgt oder tatsächlich neue Firmware per USB
+geflasht wird. Exakt dieselbe Pin-Kombination nutzt auch der automatische
+Reset-Schaltkreis beim Flashen über `pio run --target upload`.
+`docs/admin-guide.html` Abschnitt 1.1 bekam dafür eine korrekt
+proportionierte Board-Skizze (das Board ist hochkant, ca. 1:2 im
+Seitenverhältnis, nicht breit wie in der ersten Skizzenfassung) mit
+beiden Tastern markiert, plus einen Hinweis auf die fehlerhafte
+Verkäufergrafik.
+
+## Board-Bringup abgeschlossen, v0.9.0-rc3
+
+Mit dieser Runde (WLAN-Fallback-AP-Fix, Werksreset, Taster-Bedienung,
+OLED-Neugestaltung, Zabbix-taugliche Systemübersicht - siehe Einträge
+oben) ist der praktische Erst-Feldtest auf echter Hardware
+abgeschlossen: ein Board lief über zahlreiche Änderungs-/Flash-Zyklen
+hinweg stabil, alle P0-P7-Funktionsblöcke wurden am realen Gerät
+verifiziert (DHT22-Messung, OLED-Anzeige inkl. Taster, WLAN-Verbindung
+und -Fallback, Webserver inkl. Einstellungen/OTA/Werksreset,
+SNMP-Agent, mDNS, persistenter 7-Tage-Verlauf). Der vorherige Vorbehalt
+"noch nicht auf echter Hardware getestet" (siehe "Noch offen / nicht
+Teil dieser Runde" weiter oben) ist damit endgültig erledigt.
+
+Version auf `0.9.0-rc3` (Beta) angehoben (`config.h`/`config.h.example`,
+README, Admin-Guide). `docs/admin-guide.html` wurde zu
+`docs/admin-guide.pdf` exportiert (HTML-Quelle danach wieder entfernt,
+wie in allen drei Projekten üblich - bei Bedarf per `git show
+<commit>:docs/admin-guide.html` aus der Historie wiederherstellbar).

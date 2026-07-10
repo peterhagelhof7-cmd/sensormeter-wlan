@@ -12,7 +12,7 @@
 //
 // <config>
 //   <network>
-//     <wlan dhcp="true" ssid="" psk="" ip="" mask="" gateway="" dns=""/>
+//     <wlan dhcp="true" ssid="" psk="" ip="" mask="" gateway="" dns="" pendingTest="false"/>
 //   </network>
 //   <system>
 //     <name>Sensormeter WLAN</name>
@@ -21,7 +21,7 @@
 //   <syslog>
 //     <server>0.0.0.0</server>
 //   </syslog>
-//   <sensor tempOffset="0.0" humOffset="0.0"/>
+//   <sensor tempOffset="0.0" humOffset="0.0" calibratedTs="0"/>
 //   <snmp community="public"/>
 // </config>
 
@@ -36,6 +36,10 @@ struct DeviceConfig {
   // bereits korrigierten Wert sehen (siehe docs/entscheidungen.md).
   float sensorTempOffset = 0.0f;
   float sensorHumOffset = 0.0f;
+  // Wall-Clock-Zeitpunkt (time(nullptr)), zu dem die Offsets zuletzt
+  // TATSAECHLICH geaendert wurden (nicht nur gespeichert - siehe
+  // WebServerManager::handleApiConfigPost()). 0 = noch nie kalibriert.
+  uint32_t sensorCalibratedTs = 0;
 
   bool wlanDhcp = true;
   String wlanIp;
@@ -44,6 +48,14 @@ struct DeviceConfig {
   String wlanDns;  // leer = Gateway als DNS verwenden (siehe NetworkManager::applyWlanConfig)
   String wlanSsid;
   String wlanPsk;
+  // Einmal-Flag: nach Eingabe neuer WLAN-Zugangsdaten ueber die
+  // Einstellungsseite im Fallback-Access-Point gesetzt, damit
+  // NetworkManager den anschliessenden Verbindungsversuch nur kurz statt
+  // 5 Minuten abwartet (schnelles Feedback), bevor er wieder auf den
+  // Fallback-AP zurueckfaellt. Wird beim naechsten Boot sofort gelesen und
+  // geloescht - ueberlebt also nur genau einen Neustart (siehe
+  // NetworkManager::begin()).
+  bool wlanPendingTest = false;
 
   String syslogServer = "0.0.0.0";
 

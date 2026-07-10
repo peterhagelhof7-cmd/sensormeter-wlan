@@ -55,6 +55,10 @@ Task: WebServerTask
 Task: DisplayTask
 - OLED Update alle 10 Sekunden
 - Rotation der Informationsseiten
+- BOOT-Taster (GPIO0) zusätzlich als Eingabe ausgewertet: kurzer Tipp
+  schaltet manuell zur nächsten Seite, langes Halten (3s + 20s Countdown,
+  Auslösung erst beim Loslassen als Fail-Safe gegen einen verklemmten
+  Taster) löst einen Werksreset der Einstellungen aus
 
 Task: SyslogTask
 - UDP Versand bei jedem Sensorzyklus

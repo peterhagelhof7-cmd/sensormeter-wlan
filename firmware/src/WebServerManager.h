@@ -13,9 +13,13 @@
 // REST-API (/api/status, /api/sensors, /api/network, /api/logs,
 // /api/config), OTA-Update per lokalem .bin-Upload (kein HTTPS-Client,
 // siehe docs/entscheidungen.md fuer den Flash-Budget-Hintergrund, Vorbild:
-// Sensormeter-Projekt). Async (non-blocking) per AsyncWebServer - Ausnahmen:
-// WLAN-Scan und OTA-Flash sind admin-ausgeloeste Einzelaktionen und
-// blockieren kurzzeitig.
+// Sensormeter-Projekt). Async (non-blocking) per AsyncWebServer - Ausnahme:
+// OTA-Flash ist eine admin-ausgeloeste Einzelaktion und blockiert kurzzeitig.
+// Der WLAN-Scan (/api/wifi/scan) laeuft dagegen bewusst NICHT blockierend
+// (WiFi.scanNetworks(true) + Polling durch die Seite) - ein blockierender
+// Scan innerhalb eines Async-Request-Handlers hat waehrend des Betriebs als
+// Fallback-Access-Point zuverlaessig zum Reboot gefuehrt (Watchdog-Timeout,
+// siehe docs/entscheidungen.md).
 //
 // Anders als beim Sensormeter-Projekt: kein LAN-Zweig (kein Ethernet), kein
 // Sensor-2-Formular (genau ein Sensor).
@@ -64,6 +68,10 @@ class WebServerManager {
 
   void handleApiReboot(AsyncWebServerRequest* request);
   void handleApiWifiScan(AsyncWebServerRequest* request);
+  void handleApiWifiConnect(AsyncWebServerRequest* request);
+  // scope=settings: nur config.xml auf Defaults; scope=all: zusaetzlich
+  // /history.csv loeschen.
+  void handleApiFactoryReset(AsyncWebServerRequest* request);
 
   String buildPageShell(const String& title, const String& bodyContent) const;
   String buildMainPageBody() const;

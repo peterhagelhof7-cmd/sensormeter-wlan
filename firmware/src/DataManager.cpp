@@ -1,5 +1,11 @@
 #include "DataManager.h"
 
+#include <LittleFS.h>
+
+namespace {
+constexpr const char* kHistoryFile = "/history.csv";
+}
+
 void DataManager::begin() {
   _mutex = xSemaphoreCreateMutex();
 }
@@ -42,6 +48,51 @@ void DataManager::pushHourValue(const HourValue& value) {
   _ringbufferNextIndex = (_ringbufferNextIndex + 1) % RINGBUFFER_SIZE;
   if (_ringbufferCount < RINGBUFFER_SIZE) _ringbufferCount++;
   xSemaphoreGive(_mutex);
+  saveRingbuffer();
+}
+
+void DataManager::saveRingbuffer() {
+  HourValue buffer[RINGBUFFER_SIZE];
+  size_t count = getRingbuffer(buffer, RINGBUFFER_SIZE);
+
+  fs::File f = LittleFS.open(kHistoryFile, "w");
+  if (!f) {
+    Serial.println("[DATA] history.csv konnte nicht geschrieben werden");
+    return;
+  }
+  for (size_t i = 0; i < count; i++) {
+    f.printf("%ld,%.2f,%.2f\n", static_cast<long>(buffer[i].timestamp), buffer[i].temperature,
+              buffer[i].humidity);
+  }
+  f.close();
+}
+
+void DataManager::loadRingbuffer() {
+  fs::File f = LittleFS.open(kHistoryFile, "r");
+  if (!f) return;
+
+  xSemaphoreTake(_mutex, portMAX_DELAY);
+  _ringbufferCount = 0;
+  _ringbufferNextIndex = 0;
+  while (f.available() && _ringbufferCount < RINGBUFFER_SIZE) {
+    String line = f.readStringUntil('\n');
+    line.trim();
+    if (line.isEmpty()) continue;
+    int firstComma = line.indexOf(',');
+    int secondComma = line.indexOf(',', firstComma + 1);
+    if (firstComma < 0 || secondComma < 0) continue;
+    HourValue hv;
+    hv.timestamp = static_cast<time_t>(line.substring(0, firstComma).toInt());
+    hv.temperature = line.substring(firstComma + 1, secondComma).toFloat();
+    hv.humidity = line.substring(secondComma + 1).toFloat();
+    _ringbuffer[_ringbufferNextIndex] = hv;
+    _ringbufferNextIndex = (_ringbufferNextIndex + 1) % RINGBUFFER_SIZE;
+    _ringbufferCount++;
+  }
+  xSemaphoreGive(_mutex);
+  f.close();
+  Serial.printf("[DATA] %u Ringpuffer-Eintraege aus history.csv geladen\n",
+                static_cast<unsigned>(_ringbufferCount));
 }
 
 size_t DataManager::getRingbuffer(HourValue* out, size_t maxCount) {
