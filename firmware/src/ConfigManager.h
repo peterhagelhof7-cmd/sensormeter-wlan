@@ -21,12 +21,21 @@
 //   <syslog>
 //     <server>0.0.0.0</server>
 //   </syslog>
+//   <sensor tempOffset="0.0" humOffset="0.0"/>
 //   <snmp community="public"/>
 // </config>
 
 struct DeviceConfig {
   String systemName = "Sensormeter WLAN";
   String settingsPassword = "installer";
+
+  // Kalibrierkorrektur (fester Grad-/Prozent-Versatz, positiv oder
+  // negativ) - falls der DHT22 systematisch von einem Referenzwert
+  // abweicht. Wird direkt in SensorManager auf den validierten Rohmesswert
+  // angewendet, damit Anzeige, SNMP UND Stundenwerte/CSV immer denselben,
+  // bereits korrigierten Wert sehen (siehe docs/entscheidungen.md).
+  float sensorTempOffset = 0.0f;
+  float sensorHumOffset = 0.0f;
 
   bool wlanDhcp = true;
   String wlanIp;

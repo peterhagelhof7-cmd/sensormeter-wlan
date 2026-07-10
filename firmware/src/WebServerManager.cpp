@@ -38,31 +38,46 @@ bool WebServerManager::checkAuth(AsyncWebServerRequest* request) {
 }
 
 // ----------------------------------------------------------------------------
-// Seiten-Grundgeruest (Lastenheft: schwarzer Hintergrund, weisse Schrift,
-// 20pt, Rahmen um Wertebloecke, weisse Schaltflaechen mit invertierter
-// Schrift, zentriert). Tabellen/Eingabefelder sind bewusst kleiner gesetzt,
-// da dichte Tabellendaten bei 20pt nicht lesbar dargestellt werden koennten.
+// Seiten-Grundgeruest - Design an das Sensormeter-Display-Projekt angepasst
+// (Nutzerwunsch): Navy-Banner #0f1f3d, Orange-Akzent #c8622a, warmes Creme
+// #f2f0e9 fuer Tabellenkoepfe, Kartenrahmen #e4e1d8, Systemschriftart statt
+// generischem sans-serif. Kein Lastenheft-Konflikt: das vorherige
+// schwarz/weisse 20pt-Design war eine reine Stilentscheidung aus P5, keine
+// dokumentierte Anforderung (siehe docs/entscheidungen.md, identisch zum
+// Vorgehen im Sensormeter-Projekt). HTML-Struktur/Klassennamen
+// (.block/.row/label/table/...) bewusst unveraendert, nur CSS ersetzt.
 // ----------------------------------------------------------------------------
 String WebServerManager::buildPageShell(const String& title, const String& bodyContent) const {
   String html;
-  html.reserve(bodyContent.length() + 1200);
+  html.reserve(bodyContent.length() + 1400);
   html += "<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"UTF-8\">";
   html += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
   html += "<title>" + title + "</title><style>";
-  html += "body{background:#000;color:#fff;font-size:20pt;text-align:center;font-family:sans-serif;margin:0;padding:20px;}";
-  html += "h1{font-size:1.1em;}";
-  html += ".block{border:1px solid #fff;border-radius:6px;padding:14px 24px;margin:16px auto;max-width:680px;}";
-  html += ".block h2{font-size:1em;margin:0 0 10px;}";
-  html += ".row{display:flex;justify-content:space-between;gap:16px;margin:6px 0;text-align:left;}";
-  html += "button,input[type=submit]{background:#fff;color:#000;border:none;padding:10px 20px;font-size:20pt;border-radius:6px;cursor:pointer;margin:8px;}";
-  html += "table{margin:12px auto;border-collapse:collapse;font-size:14pt;}";
-  html += "td,th{border:1px solid #fff;padding:6px 12px;}";
-  html += "input[type=text],input[type=password]{font-size:16pt;padding:6px;width:80%;}";
-  html += "label{display:block;margin-top:10px;text-align:left;max-width:420px;margin-left:auto;margin-right:auto;}";
-  html += "a{color:#fff;text-decoration:none;}";
-  html += "canvas{max-width:100%;background:#111;border-radius:6px;}";
-  html += "#scanResult div{cursor:pointer;padding:4px;font-size:14pt;}";
-  html += "#scanResult div:hover{background:#222;}";
+  html += "*{box-sizing:border-box}";
+  html += "body{background:#f7f5f1;color:#1c2430;font-size:15px;text-align:center;"
+          "font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;"
+          "margin:0;padding:20px 14px 28px;line-height:1.5;}";
+  html += "h1{font-size:22px;background:#0f1f3d;color:#fff;margin:0 auto 18px;padding:18px 20px;"
+          "border-radius:6px;max-width:680px;}";
+  html += ".block{background:#fff;border:1px solid #e4e1d8;border-radius:6px;padding:14px 20px;"
+          "margin:16px auto;max-width:680px;}";
+  html += ".block h2{font-size:14px;color:#8f4a1e;margin:0 0 10px;padding-bottom:6px;"
+          "border-bottom:2px solid #c8622a;text-transform:uppercase;letter-spacing:.04em;}";
+  html += ".row{display:flex;justify-content:space-between;gap:16px;margin:8px 0;text-align:left;font-size:15px;}";
+  html += "button,input[type=submit]{background:#c8622a;color:#fff;border:none;padding:9px 18px;"
+          "font-size:14px;font-weight:600;border-radius:4px;cursor:pointer;margin:8px;}";
+  html += "button:hover,input[type=submit]:hover{opacity:.9;}";
+  html += "table{margin:12px auto;border-collapse:collapse;font-size:13px;}";
+  html += "td,th{border:1px solid #e4e1d8;padding:6px 12px;}";
+  html += "th{background:#f2f0e9;}";
+  html += "input[type=text],input[type=password]{font-size:14px;padding:7px;width:80%;"
+          "border:1px solid #d8d4c8;border-radius:4px;}";
+  html += "label{display:block;margin-top:10px;text-align:left;max-width:420px;margin-left:auto;"
+          "margin-right:auto;font-size:13px;}";
+  html += "a{color:#8f4a1e;text-decoration:none;}";
+  html += "canvas{max-width:100%;background:#fbfaf7;border:1px solid #e4e1d8;border-radius:6px;}";
+  html += "#scanResult div{cursor:pointer;padding:5px;font-size:13px;border-radius:3px;}";
+  html += "#scanResult div:hover{background:#f2f0e9;}";
   html += "</style></head><body>";
   html += bodyContent;
   html += "</body></html>";
@@ -121,8 +136,8 @@ String WebServerManager::buildMainPageBody() const {
   html += "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script><script>";
   html += "fetch('/api/graph').then(r=>r.json()).then(d=>{";
   html += "new Chart(document.getElementById('chart'),{type:'line',data:{labels:d.labels,datasets:[";
-  html += "{label:'Temperatur (C)',data:d.temperature,borderColor:'red',yAxisID:'y'},";
-  html += "{label:'Luftfeuchte (%)',data:d.humidity,borderColor:'blue',yAxisID:'y1'}]},";
+  html += "{label:'Temperatur (C)',data:d.temperature,borderColor:'#a63d2e',yAxisID:'y'},";
+  html += "{label:'Luftfeuchte (%)',data:d.humidity,borderColor:'#2a5ba0',yAxisID:'y1'}]},";
   html += "options:{scales:{y:{position:'left'},y1:{position:'right',grid:{drawOnChartArea:false}}}}});});";
   html += "fetch('/api/logs').then(r=>r.json()).then(d=>{let t=document.getElementById('logtable');";
   html += "d.entries.forEach(e=>{let r=t.insertRow();r.insertCell(0).innerText=e.time;r.insertCell(1).innerText=e.message;});});";
@@ -153,6 +168,13 @@ String WebServerManager::buildSettingsPageBody() const {
   html += "<label>Netzmaske<input type=\"text\" name=\"wlanMask\" value=\"" + cfg.wlanMask + "\"></label>";
   html += "<label>Gateway<input type=\"text\" name=\"wlanGateway\" value=\"" + cfg.wlanGateway + "\"></label>";
   html += "<label>DNS-Server (leer = Gateway verwenden)<input type=\"text\" name=\"wlanDns\" value=\"" + cfg.wlanDns + "\"></label>";
+  html += "</div>";
+
+  html += "<div class=\"block\"><h2>Sensor</h2>";
+  html += "<label>Korrektur Temperatur (&deg;C)<input type=\"text\" name=\"sensorTempOffset\" value=\"" +
+          String(cfg.sensorTempOffset, 1) + "\"></label>";
+  html += "<label>Korrektur Feuchte (%)<input type=\"text\" name=\"sensorHumOffset\" value=\"" +
+          String(cfg.sensorHumOffset, 1) + "\"></label>";
   html += "</div>";
 
   html += "<div class=\"block\"><h2>Syslog</h2>";
@@ -327,6 +349,8 @@ void WebServerManager::handleApiConfigGet(AsyncWebServerRequest* request) {
   doc["wlanMask"] = cfg.wlanMask;
   doc["wlanGateway"] = cfg.wlanGateway;
   doc["wlanDns"] = cfg.wlanDns;
+  doc["sensorTempOffset"] = cfg.sensorTempOffset;
+  doc["sensorHumOffset"] = cfg.sensorHumOffset;
   doc["syslogServer"] = cfg.syslogServer;
   doc["snmpCommunity"] = cfg.snmpCommunity;
 
@@ -353,6 +377,13 @@ void WebServerManager::handleApiConfigPost(AsyncWebServerRequest* request) {
   if (request->hasParam("wlanMask", true)) cfg.wlanMask = request->getParam("wlanMask", true)->value();
   if (request->hasParam("wlanGateway", true)) cfg.wlanGateway = request->getParam("wlanGateway", true)->value();
   if (request->hasParam("wlanDns", true)) cfg.wlanDns = request->getParam("wlanDns", true)->value();
+
+  if (request->hasParam("sensorTempOffset", true)) {
+    cfg.sensorTempOffset = request->getParam("sensorTempOffset", true)->value().toFloat();
+  }
+  if (request->hasParam("sensorHumOffset", true)) {
+    cfg.sensorHumOffset = request->getParam("sensorHumOffset", true)->value().toFloat();
+  }
 
   if (request->hasParam("syslogServer", true)) cfg.syslogServer = request->getParam("syslogServer", true)->value();
 

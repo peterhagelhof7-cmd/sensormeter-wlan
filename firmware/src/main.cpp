@@ -42,7 +42,7 @@ ConfigManager configManager;
 StorageManager storageManager;
 NetworkManager networkManager(dataManager, configManager);
 TimeManager timeManager(dataManager, networkManager);
-SensorManager sensorManager(dataManager, timeManager);
+SensorManager sensorManager(dataManager, timeManager, configManager);
 DisplayManager displayManager(dataManager, configManager, networkManager, timeManager);
 OtaManager otaManager;
 WebServerManager webServerManager(dataManager, configManager, networkManager, otaManager, timeManager);

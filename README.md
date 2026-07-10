@@ -52,7 +52,7 @@ Sensormeter-Projekts.
 
 `firmware/` ist ein PlatformIO-Projekt (Board `esp32dev`, Framework Arduino).
 
-**Version:** `0.9.0-rc1` (Beta) — Versionsschema siehe
+**Version:** `0.9.0-rc2` (Beta) — Versionsschema siehe
 [docs/entscheidungen.md](docs/entscheidungen.md#versionierung).
 
 Aktueller Stand: **P0–P7 code-vollständig, bauen fehlerfrei, noch nicht auf
@@ -92,10 +92,12 @@ Enthalten (P0–P7, siehe [docs/implementierungsplan.html](docs/implementierungs
   Laden/Speichern mit Default-Fallback, XML-Import/-Export, sicheres
   Schreiben über `.tmp`-Datei + Rename
 - `StorageManager`: LittleFS-Mount
-- `SensorManager`: DHT22-Abfrage alle 60s mit Plausibilitätsprüfung
+- `SensorManager`: DHT22-Abfrage alle 60s mit Plausibilitätsprüfung, konfigurierbare
+  Kalibrierkorrektur (°C/%, wirkt auf Anzeige, SNMP und CSV gleichermaßen)
 - `DisplayManager`: OLED SSD1306, Boot-Countdown + 5 rotierende Infoseiten
 - `WebServerManager`/`OtaManager`: Hauptseite, passwortgeschützte
-  Einstellungsseite, REST-API, lokales OTA per `.bin`-Upload
+  Einstellungsseite (inkl. Sensor-Kalibrierkorrektur), REST-API, lokales
+  OTA per `.bin`-Upload, Design an das Sensormeter-Display-Projekt angepasst
 - `SNMPManager`: SNMP v1/v2c read-only unter `.1.3.6.1.4.1.99999.x`
 - `SyslogManager`: Statusreport je Sensorzyklus + sofortige Fehler-Events per UDP 514
 

@@ -90,6 +90,11 @@ Netzwerk:
 - PSK Eingabe
 - Gateway / Netmask
 
+Sensor:
+- Kalibrierkorrektur Temperatur (°C, positiv oder negativ) - Nachtrag über
+  den ursprünglichen Umfang hinaus, siehe docs/entscheidungen.md
+- Kalibrierkorrektur Feuchte (%, positiv oder negativ)
+
 Syslog:
 - Syslog Server IP
 
@@ -134,6 +139,11 @@ OID Struktur:
 reserviert für den Fall, dass ein Gerät versehentlich mit dem
 Sensormeter-Display gegen die falsche Erwartungshaltung abgefragt wird,
 liefert dort einfach keine Antwort statt eines falschen Werts.)
+
+Hinweis: Temperatur/Luftfeuchte unter .3 enthalten bereits die auf der
+Einstellungsseite konfigurierte Kalibrierkorrektur (siehe Abschnitt 6,
+"Sensor") - SNMP meldet denselben, bereits korrigierten Wert wie Webseite
+und OLED, keinen separaten Rohwert.
 
 ------------------------------------------------------------
 

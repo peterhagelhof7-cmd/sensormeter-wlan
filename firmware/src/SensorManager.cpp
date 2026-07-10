@@ -12,8 +12,8 @@ static bool plausibleDht22(float t, float h) {
 
 static DHT dht(DHT_PIN, DHT_TYPE);
 
-SensorManager::SensorManager(DataManager& dataManager, TimeManager& timeManager)
-    : _data(dataManager), _time(timeManager) {}
+SensorManager::SensorManager(DataManager& dataManager, TimeManager& timeManager, ConfigManager& configManager)
+    : _data(dataManager), _time(timeManager), _config(configManager) {}
 
 void SensorManager::begin() {
   dht.begin();
@@ -37,6 +37,17 @@ void SensorManager::readSensor() {
     _data.setSensor(reading);
     return;
   }
+
+  // Kalibrierkorrektur erst NACH der Plausibilitaetspruefung auf den
+  // Rohmesswert anwenden - sie ist eine kleine Kalibrierkonstante, kein
+  // Mittel zur Fehlerkompensation, und soll den Garbage-Filter nicht
+  // verfaelschen. Wirkt dadurch auf Anzeige, SNMP und Stundenwerte/CSV
+  // gleichermassen, da alle denselben DataManager-Wert lesen.
+  const DeviceConfig& cfg = _config.getConfig();
+  temperature += cfg.sensorTempOffset;
+  humidity += cfg.sensorHumOffset;
+  if (humidity < 0.0f) humidity = 0.0f;
+  if (humidity > 100.0f) humidity = 100.0f;
 
   reading.temperature = temperature;
   reading.humidity = humidity;

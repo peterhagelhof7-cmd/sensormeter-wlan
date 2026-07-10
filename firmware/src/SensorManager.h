@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "ConfigManager.h"
 #include "DataManager.h"
 #include "TimeManager.h"
 
@@ -13,7 +14,7 @@ class SensorManager {
  public:
   static constexpr uint32_t kReadIntervalMs = 60UL * 1000UL;  // Pflichtenheft: 60s
 
-  SensorManager(DataManager& dataManager, TimeManager& timeManager);
+  SensorManager(DataManager& dataManager, TimeManager& timeManager, ConfigManager& configManager);
 
   void begin();
   void loop();
@@ -21,6 +22,7 @@ class SensorManager {
  private:
   DataManager& _data;
   TimeManager& _time;
+  ConfigManager& _config;
 
   uint32_t _lastReadMillis = 0;  // 0 = noch nie gelesen -> sofort beim ersten loop()
   long _lastRecordedHour = -1;

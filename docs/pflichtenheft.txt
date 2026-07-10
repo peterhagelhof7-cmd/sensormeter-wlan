@@ -134,7 +134,10 @@ struct HourValue {
   /api/config
 
 5.2 Frontend
-- HTML + CSS (dark mode, analog zum Sensormeter-Projekt)
+- HTML + CSS (helles Design, an das Sensormeter-Display-Projekt angepasst:
+  Navy-Banner, Orange-Akzent, warmes Creme - ursprünglich dark mode analog
+  zum Sensormeter-Projekt, siehe docs/entscheidungen.md für die Umstellung
+  in beiden Projekten)
 - Chart.js integration
 - auto-refresh via JS
 

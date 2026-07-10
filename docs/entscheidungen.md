@@ -295,3 +295,61 @@ die Firmware-Version bereits, das OLED bislang nicht. Ergänzt als zweite
 Zeile auf der Status-Seite (Seite 5, `DisplayManager::drawStatusPage()`) -
 damit ist die Version über alle drei Schnittstellen einsehbar, nicht nur
 über Web/SNMP.
+
+## Kalibrierkorrektur für den Sensor + Webdesign an Sensormeter Display angepasst
+
+Nutzerwunsch (identisch zum Sensormeter-Projekt, siehe dortiges
+Entscheidungsprotokoll): fester Korrekturwert (°C/%, positiv oder negativ)
+für den DHT22, der auch die SNMP-gemeldeten Werte erfasst; zusätzlich das
+Webdesign an das inzwischen überarbeitete Sensormeter-Display-Projekt
+angleichen.
+
+### SensorManager brauchte erstmals eine ConfigManager-Referenz
+Anders als im Sensormeter-Projekt (dessen `SensorManager` bereits
+`ConfigManager&` für `sensor2Enabled` kannte) hatte `SensorManager` hier
+bisher nur `DataManager&`/`TimeManager&` - keine Konfiguration nötig, da es
+nur einen fest verdrahteten Sensor ohne Optionen gibt. Für die Korrektur
+war ein drittes Konstruktorargument (`ConfigManager&`) nötig, entsprechend
+in `main.cpp` angepasst.
+
+### Korrektur direkt in SensorManager angewendet - wirkt automatisch auch auf SNMP
+`DeviceConfig` bekam `sensorTempOffset`/`sensorHumOffset` (persistiert als
+`<sensor tempOffset="" humOffset=""/>` in `config.xml`). Die Korrektur wird
+in `SensorManager::readSensor()` NACH der Plausibilitätsprüfung auf den
+Rohmesswert angewendet, bevor `DataManager::setSensor()` aufgerufen wird -
+da `SNMPManager::refreshValues()` denselben `DataManager::getSensor()`
+liest wie Webserver, OLED und Stundenwerte-Aufzeichnung, propagiert die
+Korrektur automatisch überallhin, ohne `SNMPManager` separat anfassen zu
+müssen. Luftfeuchte wird auf [0, 100] geklemmt, Temperatur bewusst nicht.
+
+### Webdesign: gleiche Umstellung wie im Sensormeter-Projekt
+`buildPageShell()` war (Copy-Paste-Vorlage aus dem Sensormeter-Projekt)
+nahezu identisch aufgebaut - dieselbe Palette übernommen (Navy-Banner
+`#0f1f3d`, Orange-Akzent `#c8622a`, warmes Creme `#f2f0e9`, Kartenrahmen
+`#e4e1d8`), nur CSS geändert, HTML-Klassennamen unverändert. Kein
+Lastenheft-Konflikt (gleiche Prüfung wie im Sensormeter-Projekt: 20pt/
+Schwarz-Weiß war nur Stilentscheidung, keine Anforderung). Die
+Einstellungsseite hatte bisher GAR KEINEN "Sensor"-Block (nur System/WLAN/
+Syslog/SNMP) - neu ergänzt, direkt mit den beiden Korrekturfeldern.
+Chart.js-Linienfarben auf `#a63d2e`/`#2a5ba0` geändert (identisch zum
+Sensormeter-Projekt).
+
+Mit `pio run` gebaut (erfolgreich, Flash 76,8 % / 1.007.125 B, RAM 15,8 % /
+51.732 B). Nicht geflasht - kein Sensormeter-WLAN-Board angeschlossen (nur
+das Sensormeter-Display-Board war über USB verfügbar, ein anderes Gerät -
+Flashen dorthin hätte die falsche Firmware auf das falsche Board gebracht).
+
+### Nachtrag: v0.9.0-rc2 + Doku aktualisiert
+
+Nach der Kalibrierkorrektur+Webdesign-Änderung oben: Version auf
+`0.9.0-rc2` (Beta) gesetzt (`config.h`/`config.h.example`, README).
+`lastenheft.txt` bekam eine neue "Sensor:"-Kategorie in Abschnitt 6 (gab es
+vorher gar nicht, da dieses Projekt bisher keine einstellbaren
+Sensor-Parameter hatte) sowie den SNMP-Korrektur-Hinweis in Abschnitt 7.
+`pflichtenheft.txt` Abschnitt 5.2 korrigiert ("dark mode" stimmt nicht
+mehr). Admin-Guide und One-Pager (beide mit wiederherstellbarer
+HTML-Quelle aus der Git-Historie, anders als beim Sensormeter-Projekt)
+ebenfalls aktualisiert und neu als PDF exportiert.
+
+Mit `pio run` neu gebaut zur Verifikation nach den Doku-Änderungen (Code
+selbst unverändert seit dem letzten Build).

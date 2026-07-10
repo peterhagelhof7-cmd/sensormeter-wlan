@@ -87,6 +87,12 @@ bool ConfigManager::importXml(const String& xml) {
   const XMLElement* syslog = root->FirstChildElement("syslog");
   cfg.syslogServer = textOr(syslog, "server", cfg.syslogServer);
 
+  const XMLElement* sensor = root->FirstChildElement("sensor");
+  if (sensor) {
+    cfg.sensorTempOffset = sensor->FloatAttribute("tempOffset", cfg.sensorTempOffset);
+    cfg.sensorHumOffset = sensor->FloatAttribute("humOffset", cfg.sensorHumOffset);
+  }
+
   const XMLElement* snmp = root->FirstChildElement("snmp");
   if (snmp) {
     String community = attrOrEmpty(snmp, "community");
@@ -129,6 +135,11 @@ String ConfigManager::exportXml() const {
   XMLElement* server = doc.NewElement("server");
   server->SetText(_config.syslogServer.c_str());
   syslog->InsertEndChild(server);
+
+  XMLElement* sensor = doc.NewElement("sensor");
+  sensor->SetAttribute("tempOffset", _config.sensorTempOffset);
+  sensor->SetAttribute("humOffset", _config.sensorHumOffset);
+  root->InsertEndChild(sensor);
 
   XMLElement* snmp = doc.NewElement("snmp");
   snmp->SetAttribute("community", _config.snmpCommunity.c_str());
