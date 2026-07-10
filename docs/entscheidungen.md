@@ -570,3 +570,27 @@ README, Admin-Guide). `docs/admin-guide.html` wurde zu
 `docs/admin-guide.pdf` exportiert (HTML-Quelle danach wieder entfernt,
 wie in allen drei Projekten üblich - bei Bedarf per `git show
 <commit>:docs/admin-guide.html` aus der Historie wiederherstellbar).
+
+## Sicherheits-Feature: Ping-Check vor statischer WLAN-IP-Vergabe
+
+Beim Speichern der Einstellungsseite wird jetzt vor dem Übernehmen einer
+neu gesetzten statischen WLAN-IP per Ping geprüft, ob im Netz bereits ein
+anderes Gerät unter dieser Adresse antwortet. Ist das der Fall, werden
+alle Einstellungen dieser Seite verworfen und eine Fehlerseite
+("IP-Adresse belegt") angezeigt statt eine Adresskollision im Netz zu
+riskieren. Identisches Muster wie bei Sensormeter (WT32-ETH01, dort
+zusätzlich für LAN) und Sensormeter Display - Bibliothek
+`marian-craciunescu/ESP32Ping` neu in `platformio.ini`, `Ping.ping(ip, 1)`
+mit der Bibliotheks-Standardwartezeit von 1s (kurz genug für den
+synchronen `AsyncWebServerRequest`-Handler, siehe die
+`WiFi.scanNetworks()`-Erfahrung oben). Der Check läuft nur, wenn sich die
+neue Adresse von der aktuell aktiven WLAN-IP unterscheidet. Admin-Guide
+entsprechend ergänzt.
+
+Werks-Zugangsdaten projektübergreifend geprüft: Sensormeter WLAN nutzte
+bereits `installer` als Web-Passwort-Default, identisch zu Sensormeter.
+Abweichend war Sensormeter Display (`admin`) - dort auf `installer`
+vereinheitlicht (kein Aenderungsbedarf in diesem Projekt).
+
+Mit `pio run` gebaut und verifiziert (erfolgreich, Flash 80,1 % /
+1.049.497 B, RAM 16,4 % / 53.772 B).

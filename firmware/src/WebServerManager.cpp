@@ -1,6 +1,7 @@
 #include "WebServerManager.h"
 
 #include <ArduinoJson.h>
+#include <ESP32Ping.h>
 #include <LittleFS.h>
 #include <Update.h>
 #include <esp_timer.h>
@@ -19,6 +20,19 @@
 #define GITHUB_REPO_SLUG "peterhagelhof7-cmd/sensormeter-wlan"
 
 namespace {
+// Sicherheits-Feature: vor dem Uebernehmen einer neu gesetzten statischen
+// WLAN-IP prueft dies per Ping, ob im Netz bereits ein Geraet unter dieser
+// Adresse antwortet - falls ja, wird die IP-Vergabe abgelehnt statt eine
+// Adresskollision zu riskieren. Ping mit count=1 und der
+// Bibliotheks-Standard-Wartezeit von 1s - kurz genug, um den
+// Async-Webserver-Handler nicht spuerbar zu blockieren (anders als der
+// mehrsekuendige WiFi.scanNetworks()-Blockierfall, siehe
+// docs/entscheidungen.md, der zum Watchdog-Reset fuehrte).
+bool ipRespondsToPing(const IPAddress& ip) {
+  if (ip == IPAddress(0, 0, 0, 0)) return false;
+  return Ping.ping(ip, 1);
+}
+
 String formatCalibratedTs(uint32_t ts) {
   if (ts == 0) return "noch nie";
   time_t t = static_cast<time_t>(ts);
@@ -449,6 +463,26 @@ void WebServerManager::handleApiConfigPost(AsyncWebServerRequest* request) {
   if (request->hasParam("snmpCommunity", true)) {
     String community = request->getParam("snmpCommunity", true)->value();
     if (community.length() > 0) cfg.snmpCommunity = community;
+  }
+
+  // Kollisions-Check: nur wenn DHCP aus ist UND sich die statische IP
+  // gegenueber der aktuell aktiven Adresse tatsaechlich aendert - vermeidet
+  // einen Ping bei jedem Speichern unveraenderter Netzwerkeinstellungen
+  // (dieses Formular deckt alle Einstellungsblocks auf einmal ab).
+  String ipConflictError;
+  IPAddress newWlanIp;
+  if (!cfg.wlanDhcp && newWlanIp.fromString(cfg.wlanIp) && newWlanIp != _network.getWlanIp() &&
+      ipRespondsToPing(newWlanIp)) {
+    ipConflictError = "WLAN-IP " + cfg.wlanIp + " ist bereits belegt (ein Geraet antwortet auf Ping).";
+  }
+  if (!ipConflictError.isEmpty()) {
+    _data.pushLogEntry(ipConflictError + " Einstellungen NICHT uebernommen.", 3);
+    String body = "<h1>IP-Adresse belegt</h1><p>" + ipConflictError +
+                  "</p><p>Alle Einstellungen dieser Seite wurden <b>nicht</b> uebernommen - bitte eine andere "
+                  "Adresse waehlen und erneut speichern.</p><p><a href=\"/settings\">Zurueck zu den "
+                  "Einstellungen</a></p>";
+    request->send(409, "text/html", buildPageShell("IP belegt", body));
+    return;
   }
 
   _config.setConfig(cfg);
