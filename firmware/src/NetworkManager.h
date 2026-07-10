@@ -37,6 +37,14 @@ class NetworkManager {
   String getWlanSsid() const;
   int getWlanRssi() const;
 
+  // Oeffentlich fuer WebServerManager::handleApiNetworkApply(): wendet die
+  // aktuell in ConfigManager gespeicherte WLAN-Konfiguration erneut live an
+  // (WiFi.config(), ohne Reconnect) - genutzt, um nach einem gescheiterten
+  // DHCP-Lease-Test (siehe dort) die laufende Verbindung auf den zuletzt
+  // bekannten, funktionierenden Stand zurueckzusetzen, statt sie im
+  // Test-Zwischenzustand (DHCP erzwungen) haengen zu lassen.
+  void reapplyWlanConfig() { applyWlanConfig(); }
+
   // Leitet aus dem frei eingebbaren Systemnamen (ConfigManager) einen
   // DNS-/mDNS-tauglichen Hostnamen ab (nur a-z/0-9/-, keine Leerzeichen/
   // Umlaute/Grossbuchstaben) - wird sowohl fuer WiFi.setHostname() als auch

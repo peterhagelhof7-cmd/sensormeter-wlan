@@ -72,6 +72,12 @@ class WebServerManager {
   // scope=settings: nur config.xml auf Defaults; scope=all: zusaetzlich
   // /history.csv loeschen.
   void handleApiFactoryReset(AsyncWebServerRequest* request);
+  // Eigener Button "IP-Einstellungen uebernehmen & neu starten" (getrennt
+  // vom allgemeinen "Speichern"-Button und von handleApiWifiConnect()):
+  // prueft die Erreichbarkeit VOR dem Uebernehmen - bei DHCP per echtem
+  // Lease-Test, bei statischer IP per Ping (ipRespondsToPing()) - und
+  // speichert + startet neu nur bei Erfolg.
+  void handleApiNetworkApply(AsyncWebServerRequest* request);
 
   String buildPageShell(const String& title, const String& bodyContent) const;
   String buildMainPageBody() const;

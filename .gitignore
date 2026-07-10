@@ -2,3 +2,4 @@
 .vscode/
 **/include/config.h
 *.bin
+firmware/logs/
