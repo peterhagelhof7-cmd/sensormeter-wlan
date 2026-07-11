@@ -44,7 +44,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/prtg-template-sensormeter-wlan.odt](docs/prtg-template-sensormeter-wlan.odt) | Fertiges PRTG-Geräte-Template für Auto-Discovery |
 | [docs/ZABBIX.md](docs/ZABBIX.md) | Zabbix-Integration: OIDs, Template-Import, Host-Einrichtung, Trigger |
 | [docs/zabbix-template-sensormeter-wlan.yaml](docs/zabbix-template-sensormeter-wlan.yaml) | Fertiges Zabbix-Template |
-| [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display): Abhängigkeiten installieren, Repo holen, bauen, flashen |
+| [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display/PoE): Abhängigkeiten installieren, Repo holen, bauen, flashen |
 
 Dieses Projekt hat (im Unterschied zu den beiden Schwesterprojekten) keine
 vorgegebene Materialsammlung – Lastenheft, Pflichtenheft und BOM wurden
