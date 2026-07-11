@@ -274,8 +274,6 @@ String WebServerManager::buildSettingsPageBody() const {
   html += "</div>";
 
   html += "<div class=\"block\"><h2>WLAN</h2>";
-  html += "<label><input type=\"checkbox\" name=\"wlanDhcp\" id=\"wlanDhcp\" " +
-          String(cfg.wlanDhcp ? "checked" : "") + "> DHCP</label>";
   html += "<label>SSID<input type=\"text\" name=\"wlanSsid\" id=\"wlanSsid\" value=\"" + cfg.wlanSsid + "\"></label>";
   html += "<button type=\"button\" onclick=\"scanWifi()\">SSIDs suchen (bis 20s)</button><div id=\"scanResult\"></div>";
   html += "<label>PSK<input type=\"password\" name=\"wlanPsk\" id=\"wlanPsk\" value=\"" + cfg.wlanPsk + "\"></label>";
@@ -283,11 +281,24 @@ String WebServerManager::buildSettingsPageBody() const {
           "<span id=\"connectStatus\"></span>";
   html += "<p class=\"hint\">Speichert nur SSID/PSK, startet sofort neu und probiert die Verbindung fuer 30s - "
           "gelingt es nicht, faellt das Geraet automatisch zurueck auf den eigenen Access-Point \"installer\".</p>";
+  html += "</div>";
+
+  html += "<div class=\"block\"><h2>IP-Einstellungen</h2>";
+  html += "<label>Modus<select name=\"wlanIpMode\" id=\"wlanIpMode\" onchange=\"toggleStaticIpFields()\">"
+          "<option value=\"dhcp\"" +
+          String(cfg.wlanDhcp ? " selected" : "") +
+          ">Automatisch (DHCP)</option>"
+          "<option value=\"static\"" +
+          String(cfg.wlanDhcp ? "" : " selected") +
+          ">Statisch</option>"
+          "</select></label>";
+  html += "<div id=\"staticIpFields\">";
   html += "<label>IP<input type=\"text\" name=\"wlanIp\" id=\"wlanIp\" value=\"" + cfg.wlanIp + "\"></label>";
   html += "<label>Netzmaske<input type=\"text\" name=\"wlanMask\" id=\"wlanMask\" value=\"" + cfg.wlanMask + "\"></label>";
   html += "<label>Gateway<input type=\"text\" name=\"wlanGateway\" id=\"wlanGateway\" value=\"" + cfg.wlanGateway + "\"></label>";
   html += "<label>DNS-Server (leer = Gateway verwenden)<input type=\"text\" name=\"wlanDns\" id=\"wlanDns\" value=\"" +
           cfg.wlanDns + "\"></label>";
+  html += "</div>";
   html += "<button type=\"button\" onclick=\"applyNetwork()\">IP-Einstellungen uebernehmen &amp; neu starten</button> "
           "<span id=\"applyNetworkStatus\"></span>";
   html += "<p class=\"hint\">Prueft vor der Uebernahme, ob die Verbindung tatsaechlich moeglich ist - bei "
@@ -397,13 +408,20 @@ String WebServerManager::buildSettingsPageBody() const {
           "document.getElementById('connectStatus').innerText='Verbinde, Geraet startet neu...';"
           "fetch('/api/wifi/connect',{method:'POST',body});}";
   html += "function applyNetwork(){"
-          "const body=new URLSearchParams({dhcp:document.getElementById('wlanDhcp').checked?'1':'0',"
+          "const body=new URLSearchParams({dhcp:document.getElementById('wlanIpMode').value==='dhcp'?'1':'0',"
           "ip:document.getElementById('wlanIp').value,mask:document.getElementById('wlanMask').value,"
           "gateway:document.getElementById('wlanGateway').value,dns:document.getElementById('wlanDns').value});"
           "document.getElementById('applyNetworkStatus').innerText='Pruefe Erreichbarkeit (bis zu 8s)...';"
           "fetch('/api/network/apply',{method:'POST',body}).then(r=>r.text()).then(t=>{"
           "document.getElementById('applyNetworkStatus').innerText=t;"
           "}).catch(()=>{document.getElementById('applyNetworkStatus').innerText='Fehler bei der Anfrage.';});}";
+  // Blendet die statischen IP-Felder nur bei Modus "Statisch" ein - Aufruf
+  // sowohl bei Auswahlwechsel als auch einmal beim Laden der Seite, damit der
+  // Anfangszustand zum gespeicherten wlanDhcp-Wert passt.
+  html += "function toggleStaticIpFields(){"
+          "document.getElementById('staticIpFields').style.display="
+          "document.getElementById('wlanIpMode').value==='static'?'':'none';}"
+          "toggleStaticIpFields();";
   html += "</script>";
 
   return html;
@@ -574,7 +592,7 @@ void WebServerManager::handleApiConfigPost(AsyncWebServerRequest* request) {
     if (pw.length() > 0) cfg.settingsPassword = pw;
   }
 
-  cfg.wlanDhcp = request->hasParam("wlanDhcp", true);
+  if (request->hasParam("wlanIpMode", true)) cfg.wlanDhcp = request->getParam("wlanIpMode", true)->value() == "dhcp";
   if (request->hasParam("wlanSsid", true)) cfg.wlanSsid = request->getParam("wlanSsid", true)->value();
   if (request->hasParam("wlanPsk", true)) cfg.wlanPsk = request->getParam("wlanPsk", true)->value();
   if (request->hasParam("wlanIp", true)) cfg.wlanIp = request->getParam("wlanIp", true)->value();

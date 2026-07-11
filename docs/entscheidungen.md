@@ -771,3 +771,53 @@ nur +976 B Flash / +32 B RAM). Geflasht und live getestet: Kommando
 `"dhcp"` gesendet, Gerät wechselte von der zuvor konfigurierten
 statischen IP `192.168.77.9` sauber auf eine per DHCP bezogene neue IP
 `192.168.77.47` - Boot-Log zeigt einen normalen Übergang ohne Fehler.
+
+## Einstellungsseite: WLAN und IP-Einstellungen getrennt, DHCP als Menü statt Checkbox
+
+Auslöser: Nutzer hat die IP im Webinterface selbst umgestellt, das Gerät
+war danach unter der alten IP nicht mehr erreichbar (Ursache lt. Serial-
+Log: DHCP hat schlicht eine andere IP vergeben als erwartet, kein Fehler -
+siehe Abschnitt oben). Die kombinierte "WLAN"-Box, in der DHCP-Checkbox,
+SSID/PSK **und** die vier statischen IP-Felder unabhängig vom
+Checkbox-Zustand immer sichtbar nebeneinanderstanden, hat dazu beigetragen
+- unklar, welche Felder bei DHCP überhaupt wirken.
+
+Geändert in `WebServerManager::buildSettingsPageBody()`:
+
+- Der bisherige eine `<div class="block"><h2>WLAN</h2>` mit allem drin
+  ist jetzt zwei Blöcke: **"WLAN"** (SSID, PSK, Scan-Button,
+  "Verbinden & testen") und **"IP-Einstellungen"** (Modus-Auswahl,
+  statische Felder, "IP-Einstellungen übernehmen & neu starten").
+- Die DHCP-Checkbox (`<input type="checkbox" name="wlanDhcp">`) ist
+  ersetzt durch ein Auswahlmenü `<select name="wlanIpMode">` mit den
+  Optionen "Automatisch (DHCP)" / "Statisch". Die vier statischen Felder
+  (IP/Netzmaske/Gateway/DNS) stecken in einem eigenen
+  `<div id="staticIpFields">`, das per `toggleStaticIpFields()`
+  (JS, an `onchange` des Menüs gehängt und einmal beim Seitenaufbau
+  aufgerufen) nur bei Modus "Statisch" sichtbar ist - bei "Automatisch"
+  bleiben sie ausgeblendet, statt wirkungslos dazustehen.
+- Backend: `handleApiConfigPost()` liest jetzt
+  `request->getParam("wlanIpMode", true)->value() == "dhcp"` statt der
+  reinen Checkbox-Anwesenheit (`hasParam("wlanDhcp", ...)`).
+  `handleApiNetworkApply()` (separater Button/Codepfad, eigener
+  `dhcp`-Parameter mit Wert "1"/"0") war bereits vom Checkbox-Feld
+  unabhängig und musste serverseitig nicht geändert werden - nur die JS-
+  Funktion `applyNetwork()` liest jetzt `document.getElementById(
+  'wlanIpMode').value` statt der nicht mehr existierenden `.checked`-
+  Eigenschaft.
+- Die beiden schon vorher parallel existierenden Parameter-Namen
+  (`wlanDhcp` boolean für `/api/config`, `dhcp`="1"/"0" für
+  `/api/network/apply`) wurden bewusst **nicht** vereinheitlicht - beide
+  Codepfade funktionieren unabhängig voneinander korrekt, eine
+  Umbenennung hätte nur Risiko ohne Nutzen gebracht.
+
+Mit `pio run` gebaut (Flash 82,7 % / 1.083.549 B, RAM 17,5 % / 57.204 B -
+praktisch unverändert, reine HTML/JS/Parsing-Änderung ohne neue Logik)
+und per USB auf das laufende Gerät geflasht. Boot-Log nach dem Flash zeigt
+einen sauberen Durchlauf `INIT → WLAN_CHECK → RUN_NORMAL` ohne Fehler,
+die zuvor gespeicherte statische IP `192.168.77.9` wurde unverändert aus
+`config.xml` übernommen (Konfiguration übersteht den Reflash wie erwartet).
+Die neue Einstellungsseite selbst konnte vom Bedienrechner aus mangels
+Route in `192.168.77.0/24` nicht im Browser nachgeprüft werden (siehe
+Netzwerk-Einschränkung oben) - nur der Build- und Boot-Erfolg sind damit
+verifiziert, nicht das visuelle Auf-/Zuklappen im Browser selbst.
