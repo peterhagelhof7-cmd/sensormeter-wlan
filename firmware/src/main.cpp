@@ -23,6 +23,7 @@
 
 #include <Arduino.h>
 #include <ESPmDNS.h>
+#include <LittleFS.h>
 
 #include "BrandingManager.h"
 #include "ConfigManager.h"
@@ -60,19 +61,50 @@ SNMPManager snmpManager(dataManager, configManager, networkManager);
 SyslogManager syslogManager(dataManager, configManager, networkManager, timeManager);
 MqttManager mqttManager(dataManager, configManager, networkManager);
 
-// Serial-Wiederherstellungskommando "dhcp" (+ Enter): stellt WLAN auf DHCP
-// um und startet neu - fuer den Fall, dass das Geraet nur per USB, aber
+// Serial-Kommandozeile fuer den Fall, dass das Geraet nur per USB, aber
 // nicht per Netzwerk erreichbar ist (z.B. andere statische IP als das
-// Bediengeraet, kein Routing dazwischen). Bewusst dasselbe
-// Vertrauensmodell wie der bestehende BOOT-Taster-Werksreset (physischer
-// Zugriff = vertrauenswuerdig, kein Web-Passwort noetig) - anders als
-// dieser aber NICHT destruktiv: nur die WLAN-Netzwerkfelder werden
-// veraendert (DHCP an, statische IP/Maske/Gateway/DNS geloescht), alle
-// uebrigen Einstellungen sowie der 7-Tage-Verlauf bleiben unangetastet.
+// Bediengeraet, kein Routing dazwischen, oder falsche/unbekannte
+// WLAN-Zugangsdaten). Bewusst dasselbe Vertrauensmodell wie der
+// bestehende BOOT-Taster-Werksreset (physischer USB-Zugriff =
+// vertrauenswuerdig, kein Web-Passwort noetig) - anders als dieser aber
+// NICHT pauschal destruktiv: nur "reset"/"reset all" loeschen etwas,
+// alle anderen Kommandos aendern gezielt nur die WLAN-/IP-Felder.
 // Reiner Zeilen-Reader ueber Serial.available()/read() - diese Firmware
-// hatte bisher ueberhaupt keinen Serial-Eingabepfad.
+// hatte urspruenglich ueberhaupt keinen Serial-Eingabepfad.
+//
+// Kommandos (jeweils + Enter):
+//   dhcp                          WLAN auf DHCP umstellen, statische
+//                                  IP/Maske/Gateway/DNS loeschen, neu starten
+//   ip <ip> <maske> <gateway> [dns]
+//                                  statische IP setzen, neu starten. Anders
+//                                  als die Einstellungsseite OHNE
+//                                  Ping-Kollisionspruefung - bewusst einfach
+//                                  gehalten, siehe docs/entscheidungen.md
+//   wifi <ssid> <passwort>        neue WLAN-Zugangsdaten setzen, neu starten
+//                                  (setzt wlanPendingTest, damit der erste
+//                                  Verbindungsversuch nur kurz statt 5 Min.
+//                                  abgewartet wird, bevor auf den
+//                                  Fallback-AP zurueckgefallen wird)
+//   status                        aktuellen Zustand ausgeben (WLAN, IP,
+//                                  Signal, Sensor, Heap, Laufzeit) - liest
+//                                  nur, aendert nichts, kein Neustart
+//   dump                          aktuelle config.xml als XML ausgeben,
+//                                  eingerahmt von BEGIN/END-Markern
+//   upload                        wartet auf eingefuegte XML-Zeilen (z.B.
+//                                  Ausgabe von "dump" zurueckgepastet),
+//                                  Abschluss mit einer Zeile
+//                                  "-----END CONFIG-----"; bei gueltigem
+//                                  XML wird gespeichert und neu gestartet,
+//                                  bei ungueltigem XML passiert nichts
+//   reset                         Werksreset nur der Einstellungen, neu
+//                                  starten (7-Tage-Verlauf bleibt erhalten)
+//   reset all                     Werksreset der Einstellungen UND Loeschen
+//                                  des 7-Tage-Verlaufs, neu starten
 void handleSerialCommands() {
   static String line;
+  static bool uploadMode = false;
+  static String uploadBuffer;
+
   while (Serial.available()) {
     char c = static_cast<char>(Serial.read());
     if (c == '\r') continue;
@@ -81,7 +113,39 @@ void handleSerialCommands() {
       continue;
     }
     line.trim();
-    if (line.equalsIgnoreCase("dhcp")) {
+
+    if (uploadMode) {
+      if (line == "-----END CONFIG-----") {
+        uploadMode = false;
+        if (configManager.importXml(uploadBuffer)) {
+          configManager.save();
+          Serial.println("[SERIAL] Konfiguration importiert, starte neu...");
+          delay(300);
+          ESP.restart();
+        } else {
+          Serial.println("[SERIAL] Import fehlgeschlagen: ungueltiges XML, keine Aenderung.");
+        }
+        uploadBuffer = "";
+      } else if (line != "-----BEGIN CONFIG-----") {
+        // BEGIN-Marker wird ignoriert (nicht Teil des XML), damit sich
+        // eine "dump"-Ausgabe unveraendert zurueckpasten laesst.
+        uploadBuffer += line;
+        uploadBuffer += "\n";
+      }
+      line = "";
+      continue;
+    }
+
+    String cmd = line;
+    String args;
+    int sp = line.indexOf(' ');
+    if (sp >= 0) {
+      cmd = line.substring(0, sp);
+      args = line.substring(sp + 1);
+      args.trim();
+    }
+
+    if (cmd.equalsIgnoreCase("dhcp")) {
       DeviceConfig cfg = configManager.getConfig();
       cfg.wlanDhcp = true;
       cfg.wlanIp = "";
@@ -92,7 +156,118 @@ void handleSerialCommands() {
       Serial.println("[SERIAL] WLAN auf DHCP umgestellt, starte neu...");
       delay(300);
       ESP.restart();
+
+    } else if (cmd.equalsIgnoreCase("ip")) {
+      String parts[4];
+      int count = 0;
+      String rest = args;
+      while (rest.length() > 0 && count < 4) {
+        int sp2 = rest.indexOf(' ');
+        if (sp2 < 0) {
+          parts[count++] = rest;
+          rest = "";
+        } else {
+          parts[count++] = rest.substring(0, sp2);
+          rest = rest.substring(sp2 + 1);
+          rest.trim();
+        }
+      }
+      IPAddress probe;
+      if (count < 3 || !probe.fromString(parts[0]) || !probe.fromString(parts[1]) ||
+          !probe.fromString(parts[2])) {
+        Serial.println("[SERIAL] Nutzung: ip <adresse> <maske> <gateway> [dns]");
+      } else {
+        DeviceConfig cfg = configManager.getConfig();
+        cfg.wlanDhcp = false;
+        cfg.wlanIp = parts[0];
+        cfg.wlanMask = parts[1];
+        cfg.wlanGateway = parts[2];
+        cfg.wlanDns = (count >= 4) ? parts[3] : "";
+        configManager.setConfig(cfg);
+        Serial.println("[SERIAL] Statische IP gesetzt, starte neu...");
+        delay(300);
+        ESP.restart();
+      }
+
+    } else if (cmd.equalsIgnoreCase("wifi")) {
+      int sp3 = args.indexOf(' ');
+      if (sp3 < 0 || args.substring(0, sp3).length() == 0) {
+        Serial.println("[SERIAL] Nutzung: wifi <ssid> <passwort>");
+      } else {
+        DeviceConfig cfg = configManager.getConfig();
+        cfg.wlanSsid = args.substring(0, sp3);
+        cfg.wlanPsk = args.substring(sp3 + 1);
+        cfg.wlanPsk.trim();
+        cfg.wlanPendingTest = true;
+        configManager.setConfig(cfg);
+        Serial.println("[SERIAL] WLAN-Zugangsdaten gesetzt, starte neu...");
+        delay(300);
+        ESP.restart();
+      }
+
+    } else if (cmd.equalsIgnoreCase("status")) {
+      DeviceConfig cfg = configManager.getConfig();
+      SensorReading sensor = dataManager.getSensor();
+      Serial.println("[SERIAL] --- Status ---");
+      Serial.print("Zustand: ");
+      Serial.println(toString(dataManager.getSystemState()));
+      Serial.print("WLAN: ");
+      if (networkManager.isUsingFallbackWlan()) {
+        Serial.println("Fallback-Access-Point \"installer\"");
+      } else if (networkManager.isWlanUp()) {
+        Serial.print("verbunden mit ");
+        Serial.println(cfg.wlanSsid);
+      } else {
+        Serial.println("nicht verbunden");
+      }
+      Serial.print("IP: ");
+      Serial.println(networkManager.getWlanIp());
+      Serial.print("Modus: ");
+      Serial.println(cfg.wlanDhcp ? "DHCP" : "statisch");
+      Serial.print("Signal: ");
+      Serial.print(networkManager.getWlanRssi());
+      Serial.println(" dBm");
+      Serial.print("Sensor: ");
+      if (sensor.valid) {
+        Serial.print(sensor.temperature, 1);
+        Serial.print(" C / ");
+        Serial.print(sensor.humidity, 1);
+        Serial.println(" %");
+      } else {
+        Serial.println("kein gueltiger Messwert");
+      }
+      Serial.print("Freier Heap: ");
+      Serial.print(ESP.getFreeHeap() / 1024);
+      Serial.println(" kB");
+      Serial.print("Laufzeit: ");
+      Serial.print((unsigned long)(esp_timer_get_time() / 1000000ULL));
+      Serial.println(" s");
+      Serial.println("[SERIAL] --- Ende Status ---");
+
+    } else if (cmd.equalsIgnoreCase("dump")) {
+      Serial.println("-----BEGIN CONFIG-----");
+      Serial.println(configManager.exportXml());
+      Serial.println("-----END CONFIG-----");
+
+    } else if (cmd.equalsIgnoreCase("upload")) {
+      uploadMode = true;
+      uploadBuffer = "";
+      Serial.println(
+          "[SERIAL] Warte auf XML-Zeilen, Abschluss mit einer Zeile \"-----END CONFIG-----\"");
+
+    } else if (cmd.equalsIgnoreCase("reset")) {
+      bool full = args.equalsIgnoreCase("all");
+      configManager.setConfig(DeviceConfig());
+      if (full) {
+        LittleFS.remove("/history.csv");
+        Serial.println("[SERIAL] Werksreset: Einstellungen und Verlauf geloescht, starte neu...");
+      } else {
+        Serial.println("[SERIAL] Werksreset: Einstellungen auf Standard zurueckgesetzt, starte neu...");
+      }
+      delay(300);
+      ESP.restart();
     }
+
     line = "";
   }
 }
@@ -104,7 +279,7 @@ void setup() {
   Serial.print("=== Sensormeter WLAN ");
   Serial.print(DEVICE_FIRMWARE_VERSION);
   Serial.println(" ===");
-  Serial.println("[SERIAL] Kommando \"dhcp\" (+ Enter) stellt WLAN auf DHCP um und startet neu");
+  Serial.println("[SERIAL] Kommandos: dhcp, ip, wifi, status, dump, upload, reset[ all] (+ Enter)");
 
   dataManager.begin();
   dataManager.setSystemState(SystemState::BOOT);

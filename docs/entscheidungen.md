@@ -876,3 +876,59 @@ korrigiert.
 Getestet: Headless-Chrome-Screenshots hell/dunkel, `getBoundingClientRect()`-
 Vermessung aller vier Karten (keine Überlappung mehr). Rein statisches
 HTML/CSS/SVG ohne Firmware-Bezug, kein Board nötig.
+
+## Serial-Kommandozeile um sechs Kommandos erweitert (status/ip/wifi/dump/upload/reset)
+
+Auf Anfrage: das bisherige einzelne `"dhcp"`-Kommando (siehe oben) war der
+erste Schritt einer USB-Notfallschnittstelle - jetzt zu einer kleinen
+Kommandozeile ausgebaut, alle im selben Vertrauensmodell (physischer
+USB-Zugriff = vertrauenswürdig, kein Passwort nötig, wie beim
+BOOT-Taster-Werksreset):
+
+- **`status`** - Zustand/WLAN/IP/Signal/Sensor/Heap/Laufzeit ausgeben, rein
+  lesend
+- **`ip <adresse> <maske> <gateway> [dns]`** - statische IP setzen, neu
+  starten. Bewusst OHNE die Ping-Kollisionsprüfung der Einstellungsseite
+  (`handleApiNetworkApply`) - für ein Notfall-Werkzeug per USB ist das
+  akzeptabel, ein Tippfehler lässt sich sofort per `dhcp` oder erneutem
+  `ip`-Aufruf korrigieren
+- **`wifi <ssid> <passwort>`** - neue WLAN-Zugangsdaten setzen, neu
+  starten; setzt `wlanPendingTest`, damit NetworkManager denselben
+  verkürzten Verbindungsversuch (statt 5 Minuten) macht wie nach einer
+  Eingabe über die Einstellungsseite im Fallback-AP - bestehende Logik
+  wiederverwendet, nichts Neues erfunden
+- **`dump`** / **`upload`** - `ConfigManager::exportXml()`/`importXml()`
+  wiederverwendet (dieselbe Logik wie der Web-XML-Export/-Import). `dump`
+  gibt die config.xml zwischen `-----BEGIN CONFIG-----`/`-----END
+  CONFIG-----` aus; `upload` sammelt Zeilen bis zu einer
+  `-----END CONFIG-----`-Zeile und puffert sie, der BEGIN-Marker wird beim
+  Einsammeln ignoriert - eine `dump`-Ausgabe lässt sich dadurch unverändert
+  zurückpasten. Bei ungültigem XML passiert nichts (wie beim
+  Web-Import auch), bei gültigem wird gespeichert und neu gestartet.
+- **`reset`** / **`reset all`** - Werksreset wie über die Einstellungsseite
+  (`handleApiFactoryReset`), `all` löscht zusätzlich `/history.csv` -
+  einzige tatsächlich destruktive Ergänzung, dafür jetzt mit `dump`/
+  `upload` eine eingebaute Sicherung/Wiederherstellung direkt daneben.
+
+Boot-Hinweiszeile aktualisiert (listet jetzt alle Kommandos statt nur
+`dhcp`).
+
+Mit `pio run` gebaut und verifiziert (Flash 83,0 % / 1.088.157 B, RAM
+17,5 % / 57.236 B - gegenüber dem vorherigen Stand ein Zuwachs von
++4.608 B Flash / +32 B RAM für sechs neue Kommandos). Geflasht und live
+über ein `pyserial`-Skript getestet:
+
+- `status` und `dump` liefern korrekte Live-Werte (u. a. echte SSID,
+  statische IP, RSSI, Sensorwert, freier Heap, Laufzeit)
+- `ip`/`wifi` ohne Argumente zeigen korrekt die Nutzungshinweise, ohne
+  etwas zu verändern
+- **Round-Trip-Test**: `dump`-Ausgabe unverändert per `upload`
+  zurückgepastet - Gerät speichert, startet neu, verbindet sich wieder
+  identisch (gleiche SSID, gleiche statische IP `192.168.77.9`)
+- **Reset+Restore-Test** (destruktivster Pfad): vor `reset` per `dump`
+  gesichert, `reset` gesendet - Gerät startet mit leeren WLAN-Zugangsdaten
+  neu (`status` zeigt danach `WLAN_CHECK`/„nicht verbunden"/DHCP-Modus/
+  IP `0.0.0.0`), anschließend die vorher gesicherte Konfiguration per
+  `upload` zurückgespielt - Gerät startet neu und verbindet sich wieder
+  exakt wie vor dem Reset (`RUN_NORMAL`, SSID `SPS-GMBH`, IP
+  `192.168.77.9`). Kein Datenverlust, vollständig wiederhergestellt.
