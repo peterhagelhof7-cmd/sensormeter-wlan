@@ -3,3 +3,4 @@
 **/include/config.h
 *.bin
 firmware/logs/
+firmware/data/

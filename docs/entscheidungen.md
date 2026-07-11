@@ -1028,3 +1028,38 @@ die zugrundeliegenden Bausteine (`DeviceConfig()`-Reset,
 `LittleFS.remove("/history.csv")`, `_branding.deleteLogo()`) sind aber
 jeweils bereits einzeln über andere Codepfade (Serial-`reset`/`reset all`,
 bestehender "Logo entfernen"-Button) live erprobt.
+
+## Familien-Standardlogo automatisch provisioniert, außer eigenes Logo bereits vorhanden
+
+Bisher musste das Standard-Branding-Logo (Tri-Orbit + Dial Mark, siehe
+sensormeter-family) nach jedem Flash manuell über die Einstellungsseite
+hochgeladen werden - leicht vergessen, und ohne Netzzugriff zum Gerät gar
+nicht möglich (siehe LAN-Zugriffsbeschränkung dieser Sitzung). Jetzt
+automatisch: `BrandingManager::begin()` prüft zuerst `checkLogoOnDisk()`
+wie bisher, ruft bei fehlendem Logo aber zusätzlich neu `provisionDefaultLogo()`
+auf, das das in `DefaultLogo.h` eingebettete Rohbild (128×64, 1bpp, exakt
+1024 Byte, identisch zur bisherigen manuellen Datei) einmalig auf LittleFS
+schreibt - Tmp-Datei-plus-Umbenennen-Muster wie beim regulären Web-Upload,
+damit ein Stromausfall mitten im Schreiben kein halbes Logo hinterlässt.
+
+**Genau das erwartete Verhalten, kein Entweder-Oder:** Ist bereits ein
+Logo vorhanden (eigenes hochgeladenes ODER schon einmal automatisch
+provisioniertes), bleibt es unangetastet - `provisionDefaultLogo()` wird
+dann gar nicht erst aufgerufen. Ein Kunden-eigenes Logo, das über die
+Einstellungsseite hochgeladen wurde, wird also nie durch das
+Familien-Standardlogo überschrieben, auch nicht bei einem erneuten
+Firmware-Flash (ein normaler `pio run --target upload` rührt die
+LittleFS-Datenpartition ohnehin nicht an).
+
+`DefaultLogo.h` liegt im Repo (kein Klartext-Geheimnis, nur Bilddaten) und
+wird aus der vorkonvertierten Datei in `sensormeter-family/logo/` generiert
+- bei einem neuen Default-Logo einfach neu konvertieren und den Array-Inhalt
+ersetzen, nicht von Hand editieren.
+
+Auf echter Hardware verifiziert: geflasht, Boot-Log zeigt keine
+`[BRANDING]`-Fehlermeldung und (korrekt) keine "automatisch eingerichtet"-
+Zeile, da auf diesem Gerät bereits ein Logo vorhanden war (kurz zuvor in
+dieser Sitzung per `pio run --target uploadfs` gesetzt) - das bestätigt
+genau den "bereits vorhanden → nichts tun"-Zweig. Der "kein Logo vorhanden
+→ automatisch schreiben"-Zweig ist nur per Code-Review verifiziert, nicht
+auf einem frisch geflashten/gelöschten Gerät getestet.
