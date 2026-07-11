@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
+#include "BrandingManager.h"
 #include "ConfigManager.h"
 #include "DataManager.h"
 #include "NetworkManager.h"
@@ -27,7 +28,7 @@
 class WebServerManager {
  public:
   WebServerManager(DataManager& dataManager, ConfigManager& configManager, NetworkManager& networkManager,
-                    OtaManager& otaManager, TimeManager& timeManager);
+                    OtaManager& otaManager, TimeManager& timeManager, BrandingManager& brandingManager);
 
   void begin();
 
@@ -37,6 +38,7 @@ class WebServerManager {
   NetworkManager& _network;
   OtaManager& _ota;
   TimeManager& _time;
+  BrandingManager& _branding;
 
   AsyncWebServer _server;
 
@@ -78,6 +80,16 @@ class WebServerManager {
   // Lease-Test, bei statischer IP per Ping (ipRespondsToPing()) - und
   // speichert + startet neu nur bei Erfolg.
   void handleApiNetworkApply(AsyncWebServerRequest* request);
+
+  // Anbieter-Branding: Logo-Upload (Streaming, analog handleApiConfigImportUpload/
+  // OTA-Upload), Logo-Auslieferung als on-the-fly synthetisiertes 1-Bit-BMP
+  // (kein PNG/JPEG-Decoder noetig, siehe BrandingManager.h) und Loeschen.
+  void handleApiBrandingLogoUpload(AsyncWebServerRequest* request, const String& filename, size_t index,
+                                    uint8_t* data, size_t len, bool final);
+  void handleBrandingLogoBmp(AsyncWebServerRequest* request);
+  void handleApiBrandingLogoDelete(AsyncWebServerRequest* request);
+
+  bool _brandingUploadOk = false;
 
   String buildPageShell(const String& title, const String& bodyContent) const;
   String buildMainPageBody() const;

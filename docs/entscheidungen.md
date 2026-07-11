@@ -649,3 +649,87 @@ konfiguriert) und wurde bisher nur so getestet (sauberer Boot ohne
 Verbindungsversuch). Ein Test gegen einen echten Broker/Home-Assistant-
 Instanz (Discovery, Reconnect-Verhalten, Statuswerte in Home Assistant
 sichtbar) steht noch aus.
+
+## Anbieter-Branding (Weisslabel) implementiert - erstes Projekt der Familie
+
+Auf Anfrage aus der Familien-Machbarkeitseinschaetzung heraus direkt
+umgesetzt: Sensormeter WLAN ist das erste der vier Projekte, das
+Anbieter-Branding (freier Vendor-Name + optionales Logo) auf der
+OLED-Anzeige und im Webserver zeigt.
+
+- **Vendor-Name**: neues `String`-Feld `brandingVendorName` in
+  `DeviceConfig`/`config.xml` (`<branding vendorName=""/>`), identisches
+  Muster zu `systemName`/`mqttServer` etc. Leer = Feature inaktiv.
+- **Logo bewusst NICHT in config.xml**: Binaerdaten gehoeren nicht in ein
+  XML-Dokument, das komplett im RAM ge-/entladen wird. Stattdessen eigene
+  Datei auf LittleFS (`/branding-logo.bin`), verwaltet durch die neue
+  Klasse `BrandingManager`.
+- **Bewusst kein PNG/JPEG-Decoder** (haette laut Machbarkeitseinschaetzung
+  30-80 KB Flash gekostet, bei diesem Projekt mit ~223 KB freiem Flash vor
+  dieser Aenderung ein spuerbarer Anteil): stattdessen ein festes,
+  einfaches Rohformat - exakt 128x64 Pixel, 1 Bit pro Pixel, MSB-zuerst je
+  Zeile, 1024 Byte fest, identisch zu dem, was
+  `Adafruit_GFX::drawBitmap()` fuer die rotierenden OLED-Seiten ohnehin
+  erwartet. Eine extern (z. B. per Python/GIMP-Export) vorkonvertierte
+  Datei muss exakt diese Groesse haben, jede Abweichung wird beim Upload
+  abgelehnt statt ein verzerrtes Bild stillschweigend zu zeigen.
+- **Upload-Streaming** (`beginLogoUpload`/`writeLogoUploadChunk`/
+  `endLogoUpload`) folgt demselben Muster wie der bestehende lokale
+  OTA-`.bin`-Upload bzw. der XML-Konfigurationsimport: Multipart-Formular,
+  Chunks werden zunaechst in eine Tmp-Datei geschrieben, die erst bei
+  exakt passender Endgroesse per Umbenennen an die Zielposition verschoben
+  wird (identisches Sicherheits-Muster zu `ConfigManager::save()` - ein
+  Stromausfall oder eine falsch grosse Datei mitten im Upload darf ein
+  zuvor funktionierendes Logo nicht zerstoeren).
+- **Web-Darstellung ohne Bild-Bibliothek**: das im Rohformat gespeicherte
+  Logo wird beim Abruf von `/branding/logo.bmp` on-the-fly in einen
+  minimalen 1-Bit-Windows-BMP verpackt (reiner Header-Bau per `memcpy`,
+  ca. 60 Zeilen) statt eine PNG-Encoder-Bibliothek einzubinden. Negative
+  Hoehe im BMP-Header waehlt Top-Down-Zeilenreihenfolge, damit die intern
+  in Adafruit-GFX-Reihenfolge gespeicherten Bytes ohne Zeilenumkehr direkt
+  uebernommen werden koennen. **Unabhaengig von echter Hardware
+  verifiziert**: dieselbe Header-Logik 1:1 in Python nachgebaut, mit
+  einem generierten 128x64-Testmuster zu einer BMP-Datei zusammengesetzt
+  und mit Pillow (echte Bildbibliothek) geladen - Groesse, Format und alle
+  8192 Pixel stimmen exakt mit dem Ausgangsmuster ueberein (kein
+  Zeilen-Flip noetig).
+- **OLED-Seite nur bei aktivem Branding Teil der Rotation**: `pageCount()`
+  liefert 6 (Default) oder 7 (Branding aktiv) statt einer festen
+  Konstante - ein unkonfiguriertes Geraet zeigt dadurch keine leere
+  Zusatzseite. Zeigt bevorzugt das Logo vollflaechig (kein Platz mehr fuer
+  Text daneben bei 128x64), ohne Logo den Vendor-Namen als Textzeile.
+- **Web-Header**: `buildPageShell()` blendet Logo (falls vorhanden) und
+  Vendor-Name oberhalb jeder Seite ein, sofern `isActive()` true ist -
+  eine einzige Einfuegestelle deckt alle Seiten ab.
+- **Gefundener und behobener Bug vor dem finalen Flash**: die
+  Arduino-ESP32-LittleFS-Bibliothek implementiert `LittleFS.exists()`
+  intern als `open(path,"r")` (siehe `LittleFS.cpp` im Framework) - das
+  quittiert die ESP-IDF-VFS-Schicht bei jedem Fehlschlag mit einer
+  `[E]`-Logzeile. Ein erster Testflash zeigte dadurch alle 10s (Takt des
+  Seitenwechsels, da `pageCount()`→`isActive()`→`hasLogo()` bei jedem
+  Wechsel neu prüfte) eine wiederkehrende
+  `open(): /littlefs/branding-logo.bin does not exist`-Zeile im
+  Boot-Log - technisch harmlos, aber ein dauerhaft wiederkehrender
+  `[E]`-Eintrag haette den "sauberer Boot-Log"-Massstab dieses Projekts
+  verfehlt. Behoben durch einen RAM-Cache (`_logoPresent`, einmalig in
+  `begin()` geprüft, aktualisiert bei Upload/Löschen) statt eines
+  LittleFS-Zugriffs bei jedem Seitenwechsel - spart nebenbei auch
+  wiederholte Flash-Zugriffe. Nach dem Fix: die Zeile erscheint nur noch
+  einmalig beim Boot (wenn kein Logo hinterlegt ist), danach nicht mehr.
+- **Nicht auf echter Hardware End-to-End getestet**: Vendor-Name-Speichern,
+  Logo-Upload und die `/branding/logo.bmp`-Auslieferung liessen sich
+  NICHT per HTTP gegen das geflashte Board verifizieren - der
+  Entwicklungsrechner befindet sich in einem anderen Netzsegment
+  (192.168.231.x) als das WLAN, in dem das Board haengt (192.168.77.x),
+  keine Route dazwischen. Verifiziert wurde stattdessen: (a) sauberer
+  Boot inkl. WLAN-Connect/RUN_NORMAL ueber einen vollen
+  Seitenrotations-Zyklus (80s Monitor-Mitschnitt), (b) die BMP-Bau-Logik
+  unabhaengig per Python-Nachbau + Pillow (siehe oben). Ein echter Test
+  von Upload/Anzeige im Browser bzw. auf dem OLED steht noch aus.
+
+Mit `pio run` gebaut und verifiziert (Flash 82,5 % / 1.081.957 B, RAM
+17,4 % / 57.172 B - gegenueber dem MQTT-Stand oben, 82,1 % / 1.075.673 B
+Flash, 16,5 % / 53.972 B RAM, ein Zuwachs von +6.284 B Flash / +3.200 B
+RAM fuer `BrandingManager` samt Web-UI/API-Anbindung und BMP-Synthese).
+Per `pio run --target upload --upload-port COM5` auf das angeschlossene
+Board geflasht.

@@ -12,7 +12,10 @@
 // jedem Sensorzyklus einen Statusreport sowie Fehler-Events sofort per UDP
 // (Port 514); MqttManager veroeffentlicht bei aktivierter Home-Assistant-
 // Anbindung Discovery- und State-Payloads per MQTT (siehe
-// sensormeter-poe/repo/docs/lastenheft.txt Abschnitt 16, docs/entscheidungen.md).
+// sensormeter-poe/repo/docs/lastenheft.txt Abschnitt 16, docs/entscheidungen.md);
+// BrandingManager haelt den optionalen Anbieter-Namen/das Logo (Weisslabel),
+// das DisplayManager als eigene OLED-Seite und WebServerManager im
+// Seiten-Header zeigt, sobald konfiguriert.
 //
 // Damit sind alle Phasen aus docs/implementierungsplan.html (P0-P7)
 // umgesetzt.
@@ -21,6 +24,7 @@
 #include <Arduino.h>
 #include <ESPmDNS.h>
 
+#include "BrandingManager.h"
 #include "ConfigManager.h"
 #include "DataManager.h"
 #include "DisplayManager.h"
@@ -47,9 +51,11 @@ StorageManager storageManager;
 NetworkManager networkManager(dataManager, configManager);
 TimeManager timeManager(dataManager, networkManager);
 SensorManager sensorManager(dataManager, timeManager, configManager);
-DisplayManager displayManager(dataManager, configManager, networkManager, timeManager);
+BrandingManager brandingManager(configManager);
+DisplayManager displayManager(dataManager, configManager, networkManager, timeManager, brandingManager);
 OtaManager otaManager;
-WebServerManager webServerManager(dataManager, configManager, networkManager, otaManager, timeManager);
+WebServerManager webServerManager(dataManager, configManager, networkManager, otaManager, timeManager,
+                                   brandingManager);
 SNMPManager snmpManager(dataManager, configManager, networkManager);
 SyslogManager syslogManager(dataManager, configManager, networkManager, timeManager);
 MqttManager mqttManager(dataManager, configManager, networkManager);
@@ -70,6 +76,7 @@ void setup() {
   configManager.begin();
   timeManager.begin();
   sensorManager.begin();
+  brandingManager.begin();
   displayManager.begin();
   syslogManager.begin();
   mqttManager.begin();

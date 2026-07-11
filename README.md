@@ -10,7 +10,10 @@ ESP32-basierter Umweltsensor (Temperatur/Luftfeuchte, DHT22) auf einem
 generischen, günstigen ESP32-WROOM-32-DevKit (reines WLAN, kein
 Ethernet). Zeigt Werte lokal auf einem OLED an, stellt sie über eine
 Weboberfläche, SNMP und Syslog bereit und meldet sich optional per
-MQTT-Discovery selbstständig bei Home Assistant an. Bewusst reduzierte,
+MQTT-Discovery selbstständig bei Home Assistant an. Unterstützt zudem
+optionales Anbieter-Branding (Weisslabel): freier Anbietername plus
+Logo, wahlweise auf einer eigenen OLED-Seite und im Webseiten-Header.
+Bewusst reduzierte,
 kostengünstigere Variante des
 [Sensormeter](https://github.com/peterhagelhof7-cmd/sensormeter)-Projekts
 (WT32-ETH01): genau ein interner Sensor, kein Modulstecker/RJ45, keine
@@ -35,7 +38,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/stueckliste.md](docs/stueckliste.md) | Bauteile pro Gerät + Preisschätzung |
 | [docs/entscheidungen.md](docs/entscheidungen.md) | Entscheidungsprotokoll: Boardwahl, Pinbelegung, OTA-Partitionierung, SNMP-Kompatibilität, bekannte Abweichungen |
 | [docs/verdrahtung.pdf](docs/verdrahtung.pdf) | Pin-Tabelle + Verdrahtungsskizze (DHT22, OLED) |
-| [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog/MQTT |
+| [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog/MQTT/Branding |
 | [docs/PRTG.md](docs/PRTG.md) | PRTG-Integration: OIDs, Geräte-Template-Import, Sensor-Übersicht |
 | [docs/prtg-template-sensormeter-wlan.odt](docs/prtg-template-sensormeter-wlan.odt) | Fertiges PRTG-Geräte-Template für Auto-Discovery |
 | [docs/ZABBIX.md](docs/ZABBIX.md) | Zabbix-Integration: OIDs, Template-Import, Host-Einrichtung, Trigger |
@@ -120,10 +123,11 @@ Enthalten (P0–P7, siehe [docs/implementierungsplan.html](docs/implementierungs
 - `SensorManager`: DHT22-Abfrage alle 60s mit Plausibilitätsprüfung, konfigurierbare
   Kalibrierkorrektur (°C/%, wirkt auf Anzeige, SNMP und CSV gleichermaßen),
   Zeitpunkt der letzten Kalibrierung wird persistent mitgeführt
-- `DisplayManager`: OLED SSD1306, Boot-Countdown + 6 rotierende Infoseiten,
-  zentrierte Darstellung mit fester, größerer Schrift - zu lange Zeilen
-  (z.B. lange WLAN-SSIDs) laufen waagerecht durch statt zu schrumpfen;
-  BOOT-Taster zusätzlich als Bedienelement (Seitenwechsel/Werksreset)
+- `DisplayManager`: OLED SSD1306, Boot-Countdown + 6 rotierende Infoseiten
+  (7 bei aktivem Anbieter-Branding), zentrierte Darstellung mit fester,
+  größerer Schrift - zu lange Zeilen (z.B. lange WLAN-SSIDs) laufen
+  waagerecht durch statt zu schrumpfen; BOOT-Taster zusätzlich als
+  Bedienelement (Seitenwechsel/Werksreset)
 - `WebServerManager`/`OtaManager`: Hauptseite, passwortgeschützte
   Einstellungsseite (inkl. Sensor-Kalibrierkorrektur, nicht-blockierendem
   WLAN-Scan mit Direktverbindung-und-Test, Werksreset), REST-API, lokales
@@ -133,6 +137,11 @@ Enthalten (P0–P7, siehe [docs/implementierungsplan.html](docs/implementierungs
 - `MqttManager`: optionale Home-Assistant-Anbindung per MQTT-Discovery
   (Sensor-Rolle, Temperatur/Luftfeuchte) — deaktiviert, solange kein
   Broker konfiguriert ist; siehe `docs/entscheidungen.md`
+- `BrandingManager`: optionales Anbieter-Branding (Weisslabel) - freier
+  Anbietername plus Logo (128x64, 1bpp, per Web-Upload), eigene
+  OLED-Seite und Web-Header-Anzeige, kein PNG/JPEG-Decoder eingebunden
+  (Logo wird als minimaler BMP on-the-fly ausgeliefert); siehe
+  `docs/entscheidungen.md`
 
 Partitionstabelle bereits verifiziert (`gen_esp32part.py`): das
 Standardschema für `esp32dev` bringt `ota_0`/`ota_1` von Haus aus mit,

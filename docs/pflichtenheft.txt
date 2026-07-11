@@ -125,6 +125,23 @@ DataManager als Vorbild):
   (Wieder-)Verbindungsaufbau neu gesendet (kein Persistenz-Aufwand fuer
   "schon gesendet" ueber einen Reconnect hinweg noetig)
 
+3.8 BrandingManager
+- Anbieter-Branding (Weisslabel), siehe docs/lastenheft.txt Abschnitt 15
+- Vendor-Name in config.xml (analog anderen Textfeldern), Logo-Binaerdaten
+  bewusst NICHT dort, sondern als eigene Rohdatei auf LittleFS
+  (/branding-logo.bin, 1024 Byte fest: 128x64 1bpp)
+- hasLogo() haelt den Vorhanden-Zustand in einem RAM-Cache statt bei jeder
+  Abfrage LittleFS.exists() aufzurufen - diese Bibliotheksfunktion ist
+  intern als open(path,"r") implementiert, was bei jedem Fehlschlag eine
+  ESP-IDF-VFS-Fehlerzeile im Log erzeugt (siehe docs/entscheidungen.md);
+  bei einer alle 10s (Seitenwechsel-Takt) wiederholten Pruefung waere das
+  eine dauerhaft wiederkehrende Logzeile gewesen
+- Upload-Streaming (beginLogoUpload/writeLogoUploadChunk/endLogoUpload)
+  identisches Tmp-Datei-plus-Umbenennen-Muster wie ConfigManager::save()
+- Web-Auslieferung ueber WebServerManager: GET /branding/logo.bmp
+  synthetisiert on-the-fly einen minimalen 1-Bit-BMP aus dem Rohformat
+  (kein PNG/JPEG-Decoder eingebunden)
+
 ------------------------------------------------------------
 
 4. DATENSPEICHERUNG
@@ -148,6 +165,12 @@ struct HourValue {
 - WLAN-Parameter (kein LAN-Abschnitt)
 - MQTT-Parameter (enabled/server/port/user/password) - Topic-Praefix wird
   NICHT gespeichert, siehe 3.7
+- Branding-Parameter (vendorName) - Logo-Binaerdaten NICHT hier, siehe 4.4
+
+4.4 branding-logo.bin
+- Optionale Datei, nur vorhanden wenn ein Logo hochgeladen wurde
+- Rohformat: 128x64 Pixel, 1 Bit pro Pixel, MSB-zuerst je Zeile, exakt
+  1024 Byte - siehe docs/lastenheft.txt Abschnitt 15.3
 
 ------------------------------------------------------------
 

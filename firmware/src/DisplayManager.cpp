@@ -37,8 +37,13 @@ static const unsigned long BUTTON_TAP_MIN_MS = 50UL;  // Entprellung fuer kurze 
 static Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 DisplayManager::DisplayManager(DataManager& dataManager, ConfigManager& configManager,
-                               NetworkManager& networkManager, TimeManager& timeManager)
-    : _data(dataManager), _config(configManager), _network(networkManager), _time(timeManager) {}
+                               NetworkManager& networkManager, TimeManager& timeManager,
+                               BrandingManager& brandingManager)
+    : _data(dataManager),
+      _config(configManager),
+      _network(networkManager),
+      _time(timeManager),
+      _branding(brandingManager) {}
 
 void DisplayManager::begin() {
   pinMode(BUTTON_BOOT_PIN, INPUT_PULLUP);
@@ -210,6 +215,26 @@ void DisplayManager::drawSignalPage() {
   drawLines(lines, 2);
 }
 
+void DisplayManager::drawBrandingPage() {
+  // Nur erreichbar, wenn isActive() true ist (siehe pageCount()) - trotzdem
+  // defensiv beide Faelle behandeln, statt sich blind auf den Aufrufer zu
+  // verlassen. Bevorzugt das Logo (fuellt den ganzen Screen, kein Platz mehr
+  // fuer Text daneben); ohne Logo den Vendor-Namen als grosse Textzeile wie
+  // die uebrigen Seiten (drawLines()).
+  if (_branding.hasLogo()) {
+    static uint8_t logoBuf[BrandingManager::LOGO_BYTES];
+    if (_branding.loadLogo(logoBuf, sizeof(logoBuf))) {
+      display.clearDisplay();
+      display.drawBitmap(0, 0, logoBuf, BrandingManager::LOGO_WIDTH, BrandingManager::LOGO_HEIGHT, SSD1306_WHITE);
+      display.display();
+      return;
+    }
+  }
+  String lines[1];
+  lines[0] = _branding.vendorName();
+  drawLines(lines, 1);
+}
+
 void DisplayManager::drawFallbackIpPage() {
   String ip = _network.isWlanUp() ? _network.getWlanIp().toString() : String("---");
 
@@ -242,7 +267,7 @@ bool DisplayManager::handleButton() {
       // Kurzer Tipp: manuell zur naechsten Seite. Wirkt sich nur sichtbar
       // aus, wenn gerade die normale Seitenrotation laeuft (Boot/Fallback
       // haben keine Seiten zum Weiterschalten) - dort aber unschaedlich.
-      _currentPage = (_currentPage + 1) % PAGE_COUNT;
+      _currentPage = (_currentPage + 1) % pageCount();
       _lastPageSwitchMillis = now;
     } else if (heldMs >= BUTTON_RESET_HOLD_MS + BUTTON_RESET_COUNTDOWN_MS) {
       // Fail-Safe gegen einen verklemmten Taster: der Reset wird erst BEIM
@@ -289,6 +314,7 @@ void DisplayManager::drawPage(int page) {
     case 3: drawSensorPage(); break;
     case 4: drawStatusPage(); break;
     case 5: drawSignalPage(); break;
+    case 6: drawBrandingPage(); break;
     default: break;
   }
 }
@@ -330,7 +356,7 @@ void DisplayManager::loop() {
     _lastPageSwitchMillis = millis();
   } else if (millis() - _lastPageSwitchMillis >= PAGE_INTERVAL_MS) {
     _lastPageSwitchMillis = millis();
-    _currentPage = (_currentPage + 1) % PAGE_COUNT;
+    _currentPage = (_currentPage + 1) % pageCount();
   }
   drawPage(_currentPage);
 }

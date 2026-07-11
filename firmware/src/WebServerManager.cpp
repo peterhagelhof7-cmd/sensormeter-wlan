@@ -58,16 +58,73 @@ String formatCsvTimestamp(uint32_t ts) {
            tmv.tm_hour, tmv.tm_min, tmv.tm_sec);
   return String(buf);
 }
+
+// Synthetisiert einen minimalen 1-Bit-Windows-BMP (BITMAPFILEHEADER 14B +
+// BITMAPINFOHEADER 40B + 2-Farben-Palette 8B + Pixeldaten) direkt in einen
+// vom Aufrufer bereitgestellten Puffer, damit das intern als rohes
+// 1bpp-Array gespeicherte Logo per <img> im Browser darstellbar ist, ohne
+// eine PNG/JPEG-Bibliothek einzubinden (siehe BrandingManager.h). Bewusst
+// ein reiner Byte-Puffer statt einer Arduino-String - eine String duerfte
+// zwar embedded Nullbytes technisch vertragen (laengenbasiert, nicht
+// strlen-basiert), aber die einzige String-Ueberladung von
+// AsyncWebServer::beginResponse() ist als deprecated markiert, die
+// Byte-Pointer+Laenge-Variante ist der empfohlene, sichere Weg. Negative
+// Hoehe im Header waehlt Top-Down-Zeilenreihenfolge (von allen gaengigen
+// Browsern unterstuetzt), damit die in Adafruit-GFX-Reihenfolge
+// (oben->unten, MSB zuerst je Zeile) gespeicherten Bytes 1:1 uebernommen
+// werden koennen - BMP verlangt sonst Bottom-Up. 128px Breite / 8 = 16 Byte
+// je Zeile ist bereits ein Vielfaches von 4 (BMP-Zeilen muessen auf 4 Byte
+// ausgerichtet sein), daher kein Padding noetig. Bit=1 -> Palette-Index 1
+// (Weiss), Bit=0 -> Index 0 (Schwarz) - passt exakt zur
+// SSD1306_WHITE-Konvention von drawBitmap().
+constexpr size_t BMP_HEADER_BYTES = 14 + 40 + 8;
+
+void buildLogoBmp(const uint8_t* xbm, size_t xbmLen, int width, int height, uint8_t* out) {
+  memset(out, 0, BMP_HEADER_BYTES);
+
+  const uint32_t pixelDataOffset = BMP_HEADER_BYTES;
+  const uint32_t fileSize = pixelDataOffset + xbmLen;
+  const int32_t negHeight = -height;
+
+  out[0] = 'B';
+  out[1] = 'M';
+  memcpy(out + 2, &fileSize, 4);
+  memcpy(out + 10, &pixelDataOffset, 4);
+
+  const uint32_t headerSize = 40;
+  const uint16_t planes = 1, bpp = 1;
+  const uint32_t compression = 0, imageSize = xbmLen, ppm = 2835, colors = 2, important = 2;
+  memcpy(out + 14, &headerSize, 4);
+  memcpy(out + 18, &width, 4);
+  memcpy(out + 22, &negHeight, 4);
+  memcpy(out + 26, &planes, 2);
+  memcpy(out + 28, &bpp, 2);
+  memcpy(out + 30, &compression, 4);
+  memcpy(out + 34, &imageSize, 4);
+  memcpy(out + 38, &ppm, 4);
+  memcpy(out + 42, &ppm, 4);
+  memcpy(out + 46, &colors, 4);
+  memcpy(out + 50, &important, 4);
+
+  // Palette: Index 0 = Schwarz (bereits durch memset genullt), Index 1 =
+  // Weiss (je 4 Byte BGRA, Alpha bleibt 0)
+  out[58] = 0xFF;
+  out[59] = 0xFF;
+  out[60] = 0xFF;
+
+  memcpy(out + pixelDataOffset, xbm, xbmLen);
+}
 }  // namespace
 
 WebServerManager::WebServerManager(DataManager& dataManager, ConfigManager& configManager,
                                     NetworkManager& networkManager, OtaManager& otaManager,
-                                    TimeManager& timeManager)
+                                    TimeManager& timeManager, BrandingManager& brandingManager)
     : _data(dataManager),
       _config(configManager),
       _network(networkManager),
       _ota(otaManager),
       _time(timeManager),
+      _branding(brandingManager),
       _server(80) {}
 
 bool WebServerManager::checkAuth(AsyncWebServerRequest* request) {
@@ -122,7 +179,20 @@ String WebServerManager::buildPageShell(const String& title, const String& bodyC
   html += "canvas{max-width:100%;background:#fbfaf7;border:1px solid #e4e1d8;border-radius:6px;}";
   html += "#scanResult div{cursor:pointer;padding:5px;font-size:13px;border-radius:3px;}";
   html += "#scanResult div:hover{background:#f2f0e9;}";
+  html += ".brand{display:flex;align-items:center;justify-content:center;gap:10px;"
+          "margin:0 auto 10px;max-width:680px;font-size:12.5px;color:#6b6559;}";
+  html += ".brand img{height:28px;width:auto;}";
   html += "</style></head><body>";
+  if (_branding.isActive()) {
+    html += "<div class=\"brand\">";
+    if (_branding.hasLogo()) {
+      html += "<img src=\"/branding/logo.bmp\" alt=\"Logo\">";
+    }
+    if (_branding.hasVendorName()) {
+      html += "<span>" + _branding.vendorName() + "</span>";
+    }
+    html += "</div>";
+  }
   html += bodyContent;
   html += "</body></html>";
   return html;
@@ -255,8 +325,29 @@ String WebServerManager::buildSettingsPageBody() const {
           "Luftfeuchte). Bleibt inaktiv, solange keine Broker-Adresse eingetragen ist.</p>";
   html += "</div>";
 
+  html += "<div class=\"block\"><h2>Anbieter-Branding</h2>";
+  html += "<label>Anbietername<input type=\"text\" name=\"brandingVendorName\" value=\"" +
+          cfg.brandingVendorName + "\"></label>";
+  html += "<p class=\"hint\">Erscheint zusaetzlich zum Systemnamen auf einer eigenen OLED-Seite und im "
+          "Kopfbereich der Weboberfläche, sobald Name und/oder Logo gesetzt sind.</p>";
+  html += "</div>";
+
   html += "<div class=\"block\"><input type=\"submit\" value=\"Speichern (LittleFS)\"></div>";
   html += "</form>";
+
+  html += "<div class=\"block\"><h2>Logo</h2>";
+  if (_branding.hasLogo()) {
+    html += "<p class=\"row\"><img src=\"/branding/logo.bmp\" alt=\"Logo\" style=\"height:48px;\"></p>";
+    html += "<form method=\"POST\" action=\"/api/branding/logo/delete\" "
+            "onsubmit=\"return confirm('Logo wirklich entfernen?')\">"
+            "<input type=\"submit\" value=\"Logo entfernen\"></form>";
+  }
+  html += "<form method=\"POST\" action=\"/api/branding/logo\" enctype=\"multipart/form-data\">";
+  html += "<input type=\"file\" name=\"file\" accept=\".bin\"><input type=\"submit\" value=\"Logo hochladen\">";
+  html += "</form>";
+  html += "<p class=\"hint\">Erwartet eine vorkonvertierte Rohdatei: 128x64 Pixel, 1 Bit pro Pixel, "
+          "MSB-zuerst je Zeile, genau 1024 Byte (kein PNG/JPEG) - jede andere Groesse wird abgelehnt.</p>";
+  html += "</div>";
 
   html += "<div class=\"block\"><h2>Konfiguration</h2>";
   html += "<a href=\"/api/config/export\"><button type=\"button\">XML Export</button></a>";
@@ -464,6 +555,8 @@ void WebServerManager::handleApiConfigGet(AsyncWebServerRequest* request) {
   doc["mqttPort"] = cfg.mqttPort;
   doc["mqttUser"] = cfg.mqttUser;
   doc["mqttPassword"] = cfg.mqttPassword;
+  doc["brandingVendorName"] = cfg.brandingVendorName;
+  doc["brandingHasLogo"] = _branding.hasLogo();
 
   String out;
   serializeJson(doc, out);
@@ -520,6 +613,10 @@ void WebServerManager::handleApiConfigPost(AsyncWebServerRequest* request) {
   }
   if (request->hasParam("mqttUser", true)) cfg.mqttUser = request->getParam("mqttUser", true)->value();
   if (request->hasParam("mqttPassword", true)) cfg.mqttPassword = request->getParam("mqttPassword", true)->value();
+
+  if (request->hasParam("brandingVendorName", true)) {
+    cfg.brandingVendorName = request->getParam("brandingVendorName", true)->value();
+  }
 
   // Kollisions-Check: nur wenn DHCP aus ist UND sich die statische IP
   // gegenueber der aktuell aktiven Adresse tatsaechlich aendert - vermeidet
@@ -722,6 +819,41 @@ void WebServerManager::handleApiNetworkApply(AsyncWebServerRequest* request) {
   ESP.restart();
 }
 
+void WebServerManager::handleApiBrandingLogoUpload(AsyncWebServerRequest* request, const String& filename,
+                                                    size_t index, uint8_t* data, size_t len, bool final) {
+  if (!checkAuth(request)) return;
+
+  if (index == 0) _brandingUploadOk = _branding.beginLogoUpload();
+  if (_brandingUploadOk) {
+    _brandingUploadOk = _branding.writeLogoUploadChunk(data, len);
+  }
+  if (final) {
+    _brandingUploadOk = _brandingUploadOk && _branding.endLogoUpload();
+  }
+}
+
+void WebServerManager::handleBrandingLogoBmp(AsyncWebServerRequest* request) {
+  static uint8_t logoBuf[BrandingManager::LOGO_BYTES];
+  if (!_branding.loadLogo(logoBuf, sizeof(logoBuf))) {
+    request->send(404, "text/plain", "Kein Logo hinterlegt");
+    return;
+  }
+
+  static uint8_t bmpBuf[BMP_HEADER_BYTES + BrandingManager::LOGO_BYTES];
+  buildLogoBmp(logoBuf, sizeof(logoBuf), BrandingManager::LOGO_WIDTH, BrandingManager::LOGO_HEIGHT, bmpBuf);
+
+  AsyncWebServerResponse* response = request->beginResponse(200, "image/bmp", bmpBuf, sizeof(bmpBuf));
+  response->addHeader("Cache-Control", "no-cache");
+  request->send(response);
+}
+
+void WebServerManager::handleApiBrandingLogoDelete(AsyncWebServerRequest* request) {
+  if (!checkAuth(request)) return;
+  _branding.deleteLogo();
+  _data.pushLogEntry("Anbieter-Logo entfernt");
+  request->redirect("/settings");
+}
+
 // ----------------------------------------------------------------------------
 void WebServerManager::begin() {
   _server.on("/", HTTP_GET, [this](AsyncWebServerRequest* r) { handleRoot(r); });
@@ -779,6 +911,24 @@ void WebServerManager::begin() {
         if (final && _otaInProgress) {
           _otaSuccess = _ota.endLocalUpdate();
         }
+      });
+
+  _server.on("/branding/logo.bmp", HTTP_GET, [this](AsyncWebServerRequest* r) { handleBrandingLogoBmp(r); });
+  _server.on("/api/branding/logo/delete", HTTP_POST,
+             [this](AsyncWebServerRequest* r) { handleApiBrandingLogoDelete(r); });
+  _server.on(
+      "/api/branding/logo", HTTP_POST,
+      [this](AsyncWebServerRequest* r) {
+        if (!checkAuth(r)) return;
+        if (_brandingUploadOk) {
+          _data.pushLogEntry("Anbieter-Logo hochgeladen");
+        } else {
+          _data.pushLogEntry("Logo-Upload fehlgeschlagen (falsches Format/Groesse?)", 3);
+        }
+        r->redirect("/settings");
+      },
+      [this](AsyncWebServerRequest* r, String filename, size_t index, uint8_t* data, size_t len, bool final) {
+        handleApiBrandingLogoUpload(r, filename, index, data, len, final);
       });
 
   _server.begin();

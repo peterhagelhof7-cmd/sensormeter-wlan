@@ -298,3 +298,41 @@ und SNMP.
 - MQTT aktiv (Checkbox)
 - Broker-Adresse, Port (Default 1883)
 - Benutzername/Passwort (optional, für Broker mit Authentifizierung)
+
+------------------------------------------------------------
+
+15. ANBIETER-BRANDING (WEISSLABEL)
+
+15.1 Umfang
+Optionale Weisslabel-Kennzeichnung: frei einstellbarer Anbietername plus
+optionales Logo-Bild, zusätzlich zum weiterhin bestehenden, frei
+editierbaren Systemnamen. Beide unabhängig voneinander optional - leer
+bzw. kein Logo hochgeladen = Feature inaktiv, kein Verhaltensunterschied
+zur bisherigen Firmware.
+
+15.2 Anzeige
+- OLED: eigene rotierende Seite (siehe Abschnitt 11), nur Teil der
+  Rotation, wenn Anbietername ODER Logo gesetzt ist. Zeigt bevorzugt das
+  Logo vollflächig (128x64 füllt den ganzen Screen), ohne Logo den
+  Anbietername als Textzeile.
+- Weboberfläche: Logo (falls vorhanden) und Anbietername erscheinen im
+  Kopfbereich jeder Seite (Hauptseite, Einstellungsseite), oberhalb des
+  bisherigen Seiteninhalts.
+
+15.3 Logo-Format
+Bewusst kein PNG/JPEG (hätte eine Decoder-Bibliothek und damit
+30-80 KB zusätzliches Flash gekostet): festes Rohformat, 128x64 Pixel,
+1 Bit pro Pixel, MSB-zuerst je Zeile, exakt 1024 Byte - identisch zu dem,
+was Adafruit_GFX::drawBitmap() für die OLED-Seiten ohnehin erwartet. Eine
+extern vorkonvertierte Datei muss exakt diese Größe haben, jede Abweichung
+wird beim Upload abgelehnt.
+
+15.4 Konfiguration (Einstellungsseite, siehe Abschnitt 6)
+- Anbietername (Textfeld)
+- Logo hochladen (Datei-Upload, .bin, exakt 1024 Byte erwartet)
+- Logo entfernen (Button, nur sichtbar wenn ein Logo hinterlegt ist)
+
+15.5 Web-Auslieferung des Logos
+Eigener Endpunkt GET /branding/logo.bmp liefert das gespeicherte Rohformat
+on-the-fly als minimalen 1-Bit-Windows-BMP aus (kein PNG-Encoder nötig) -
+direkt per <img>-Tag im Browser darstellbar.
