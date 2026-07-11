@@ -8,7 +8,10 @@
 
 ESP32-basierter Umweltsensor (Temperatur/Luftfeuchte, DHT22) auf einem
 generischen, günstigen ESP32-WROOM-32-DevKit (reines WLAN, kein
-Ethernet). Bewusst reduzierte, kostengünstigere Variante des
+Ethernet). Zeigt Werte lokal auf einem OLED an, stellt sie über eine
+Weboberfläche, SNMP und Syslog bereit und meldet sich optional per
+MQTT-Discovery selbstständig bei Home Assistant an. Bewusst reduzierte,
+kostengünstigere Variante des
 [Sensormeter](https://github.com/peterhagelhof7-cmd/sensormeter)-Projekts
 (WT32-ETH01): genau ein interner Sensor, kein Modulstecker/RJ45, keine
 Erweiterbarkeit — wer zwei Sensoren oder eine Modularerweiterung braucht,
@@ -32,7 +35,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/stueckliste.md](docs/stueckliste.md) | Bauteile pro Gerät + Preisschätzung |
 | [docs/entscheidungen.md](docs/entscheidungen.md) | Entscheidungsprotokoll: Boardwahl, Pinbelegung, OTA-Partitionierung, SNMP-Kompatibilität, bekannte Abweichungen |
 | [docs/verdrahtung.pdf](docs/verdrahtung.pdf) | Pin-Tabelle + Verdrahtungsskizze (DHT22, OLED) |
-| [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog |
+| [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog/MQTT |
 | [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display): Abhängigkeiten installieren, Repo holen, bauen, flashen |
 
 Dieses Projekt hat (im Unterschied zu den beiden Schwesterprojekten) keine
