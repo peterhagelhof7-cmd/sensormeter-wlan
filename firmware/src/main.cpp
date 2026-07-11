@@ -60,6 +60,43 @@ SNMPManager snmpManager(dataManager, configManager, networkManager);
 SyslogManager syslogManager(dataManager, configManager, networkManager, timeManager);
 MqttManager mqttManager(dataManager, configManager, networkManager);
 
+// Serial-Wiederherstellungskommando "dhcp" (+ Enter): stellt WLAN auf DHCP
+// um und startet neu - fuer den Fall, dass das Geraet nur per USB, aber
+// nicht per Netzwerk erreichbar ist (z.B. andere statische IP als das
+// Bediengeraet, kein Routing dazwischen). Bewusst dasselbe
+// Vertrauensmodell wie der bestehende BOOT-Taster-Werksreset (physischer
+// Zugriff = vertrauenswuerdig, kein Web-Passwort noetig) - anders als
+// dieser aber NICHT destruktiv: nur die WLAN-Netzwerkfelder werden
+// veraendert (DHCP an, statische IP/Maske/Gateway/DNS geloescht), alle
+// uebrigen Einstellungen sowie der 7-Tage-Verlauf bleiben unangetastet.
+// Reiner Zeilen-Reader ueber Serial.available()/read() - diese Firmware
+// hatte bisher ueberhaupt keinen Serial-Eingabepfad.
+void handleSerialCommands() {
+  static String line;
+  while (Serial.available()) {
+    char c = static_cast<char>(Serial.read());
+    if (c == '\r') continue;
+    if (c != '\n') {
+      line += c;
+      continue;
+    }
+    line.trim();
+    if (line.equalsIgnoreCase("dhcp")) {
+      DeviceConfig cfg = configManager.getConfig();
+      cfg.wlanDhcp = true;
+      cfg.wlanIp = "";
+      cfg.wlanMask = "";
+      cfg.wlanGateway = "";
+      cfg.wlanDns = "";
+      configManager.setConfig(cfg);
+      Serial.println("[SERIAL] WLAN auf DHCP umgestellt, starte neu...");
+      delay(300);
+      ESP.restart();
+    }
+    line = "";
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(300);
@@ -67,6 +104,7 @@ void setup() {
   Serial.print("=== Sensormeter WLAN ");
   Serial.print(DEVICE_FIRMWARE_VERSION);
   Serial.println(" ===");
+  Serial.println("[SERIAL] Kommando \"dhcp\" (+ Enter) stellt WLAN auf DHCP um und startet neu");
 
   dataManager.begin();
   dataManager.setSystemState(SystemState::BOOT);
@@ -87,6 +125,7 @@ void setup() {
 }
 
 void loop() {
+  handleSerialCommands();
   networkManager.loop();
   timeManager.loop();
   sensorManager.loop();

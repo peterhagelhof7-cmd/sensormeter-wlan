@@ -733,3 +733,41 @@ Flash, 16,5 % / 53.972 B RAM, ein Zuwachs von +6.284 B Flash / +3.200 B
 RAM fuer `BrandingManager` samt Web-UI/API-Anbindung und BMP-Synthese).
 Per `pio run --target upload --upload-port COM5` auf das angeschlossene
 Board geflasht.
+
+## Serial-Wiederherstellungskommando "dhcp" ergänzt
+
+Auf Anfrage: das Gerät war per HTTP nicht mehr erreichbar, weil es mit
+einer statischen IP in einem Netzsegment lief, zu dem der Bedienrechner
+keine Route hatte (siehe auch die entsprechenden Hinweise beim
+Branding-Feature oben). Bisher hatte diese Firmware **keinen einzigen
+Serial-Eingabepfad** - `Serial` wurde ausschließlich für Log-Ausgaben
+verwendet (`Serial.println`/`printf`), nirgends `Serial.available()`/
+`Serial.read()` aufgerufen.
+
+Ergänzt: eine minimale Zeile `handleSerialCommands()` in `main.cpp`
+(zuoberst in `loop()` aufgerufen), die eingehende Serial-Zeilen sammelt
+und bei exakt `"dhcp"` (Groß-/Kleinschreibung egal) die WLAN-Konfiguration
+auf DHCP umstellt (`wlanDhcp=true`, statische IP/Maske/Gateway/DNS
+geleert), speichert und neu startet - identischer Codepfad wie
+`ConfigManager::setConfig()`, sonst nichts Neues erfunden.
+
+- **Bewusst dasselbe Vertrauensmodell wie der bestehende
+  BOOT-Taster-Werksreset**: physischer/USB-Zugriff gilt als
+  vertrauenswürdig, kein Web-Passwort nötig für dieses Kommando - anders
+  als der Taster-Reset aber **nicht destruktiv**: nur die WLAN-Netzwerk-
+  felder ändern sich, alle übrigen Einstellungen (Kalibrierung, MQTT,
+  Branding, SNMP/Syslog-Community) und der 7-Tage-Verlauf bleiben
+  unangetastet.
+- Kein neuer Task/Thread, keine Interrupt-Handler - reines Polling in
+  `loop()`, wie der Rest der Firmware auch.
+- Getestet: per `pyserial`-Skript verbunden, `"dhcp\r\n"` gesendet,
+  Neustart + erfolgreicher DHCP-Bezug im Log live mitverfolgt (siehe
+  unten) - kein Crash-Loop, sauberer state-Übergang
+  `INIT → WLAN_CHECK → RUN_NORMAL`.
+
+Mit `pio run` gebaut und verifiziert (Flash 82,6 % / 1.082.933 B, RAM
+17,5 % / 57.204 B - gegenüber dem Branding-Stand oben, ein Zuwachs von
+nur +976 B Flash / +32 B RAM). Geflasht und live getestet: Kommando
+`"dhcp"` gesendet, Gerät wechselte von der zuvor konfigurierten
+statischen IP `192.168.77.9` sauber auf eine per DHCP bezogene neue IP
+`192.168.77.47` - Boot-Log zeigt einen normalen Übergang ohne Fehler.

@@ -142,6 +142,12 @@ Enthalten (P0–P7, siehe [docs/implementierungsplan.html](docs/implementierungs
   OLED-Seite und Web-Header-Anzeige, kein PNG/JPEG-Decoder eingebunden
   (Logo wird als minimaler BMP on-the-fly ausgeliefert); siehe
   `docs/entscheidungen.md`
+- Serial-Wiederherstellungskommando `dhcp` (+ Enter, 115200 Baud): stellt
+  WLAN auf DHCP um und startet neu - für den Fall, dass das Gerät nur per
+  USB, aber nicht per Netzwerk erreichbar ist (z. B. statische IP in einem
+  fremden Netzsegment). Nicht destruktiv (nur WLAN-Netzwerkfelder ändern
+  sich), gleiches Vertrauensmodell wie der BOOT-Taster-Werksreset
+  (physischer Zugriff = vertrauenswürdig); siehe `docs/entscheidungen.md`
 
 Partitionstabelle bereits verifiziert (`gen_esp32part.py`): das
 Standardschema für `esp32dev` bringt `ota_0`/`ota_1` von Haus aus mit,
