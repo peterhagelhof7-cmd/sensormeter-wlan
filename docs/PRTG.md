@@ -108,3 +108,8 @@ verifiziert (wohlgeformtes XML, korrekte `kind`-Werte
 `factord`) – alle OIDs zusätzlich direkt gegen `SNMPManager.cpp`
 gegengeprüft. Vor dem produktiven Einsatz trotzdem einmal testweise
 importieren und die Sensorwerte gegen `snmpget` (siehe oben) gegenprüfen.
+
+## Siehe auch
+
+[docs/ZABBIX.md](ZABBIX.md) – gleichwertiges Template für Zabbix (gleiches
+OID-Schema, unabhängiges Werkzeug).

@@ -38,6 +38,8 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog/MQTT |
 | [docs/PRTG.md](docs/PRTG.md) | PRTG-Integration: OIDs, Geräte-Template-Import, Sensor-Übersicht |
 | [docs/prtg-template-sensormeter-wlan.odt](docs/prtg-template-sensormeter-wlan.odt) | Fertiges PRTG-Geräte-Template für Auto-Discovery |
+| [docs/ZABBIX.md](docs/ZABBIX.md) | Zabbix-Integration: OIDs, Template-Import, Host-Einrichtung, Trigger |
+| [docs/zabbix-template-sensormeter-wlan.yaml](docs/zabbix-template-sensormeter-wlan.yaml) | Fertiges Zabbix-Template |
 | [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display): Abhängigkeiten installieren, Repo holen, bauen, flashen |
 
 Dieses Projekt hat (im Unterschied zu den beiden Schwesterprojekten) keine
