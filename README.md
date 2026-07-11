@@ -38,6 +38,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/stueckliste.md](docs/stueckliste.md) | Bauteile pro Gerät + Preisschätzung |
 | [docs/entscheidungen.md](docs/entscheidungen.md) | Entscheidungsprotokoll: Boardwahl, Pinbelegung, OTA-Partitionierung, SNMP-Kompatibilität, bekannte Abweichungen |
 | [docs/verdrahtung.pdf](docs/verdrahtung.pdf) | Pin-Tabelle + Verdrahtungsskizze (DHT22, OLED) |
+| [docs/verdrahtungsplan.html](docs/verdrahtungsplan.html) | Interaktive Kurzfassung derselben Verdrahtung - Klick auf einen Draht im Schema hebt ihn hervor und zeigt Start-/Zielpin |
 | [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog/MQTT/Branding |
 | [docs/PRTG.md](docs/PRTG.md) | PRTG-Integration: OIDs, Geräte-Template-Import, Sensor-Übersicht |
 | [docs/prtg-template-sensormeter-wlan.odt](docs/prtg-template-sensormeter-wlan.odt) | Fertiges PRTG-Geräte-Template für Auto-Discovery |

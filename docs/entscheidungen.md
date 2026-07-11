@@ -821,3 +821,26 @@ Die neue Einstellungsseite selbst konnte vom Bedienrechner aus mangels
 Route in `192.168.77.0/24` nicht im Browser nachgeprüft werden (siehe
 Netzwerk-Einschränkung oben) - nur der Build- und Boot-Erfolg sind damit
 verifiziert, nicht das visuelle Auf-/Zuklappen im Browser selbst.
+
+## Verdrahtungsplan interaktiv: docs/verdrahtungsplan.html ergänzt
+
+Auf Anfrage, familienweit für alle vier Projekte. Wie beim Hauptprojekt
+Sensormeter existierte hier bisher nur `docs/verdrahtung.pdf` (Pin-Tabelle
++ statische Skizze), keine HTML-Quelle. Pin-Daten (5 Verbindungen: 3V3→
+DHT22 VCC/OLED VCC, GND→DHT22 GND/OLED GND, GPIO4→DHT22 DATA, GPIO21→OLED
+SDA, GPIO22→OLED SCL, insgesamt 7 Drähte) direkt aus dem PDF übernommen -
+einfachstes Schema der Familie, da kein RJ45-Modularanschluss und kein
+Ethernet vorhanden sind.
+
+Gleiches Muster wie bei Sensormeter (siehe dortiges Protokoll) und
+Sensormeter PoE übernommen: Inline-SVG mit unsichtbarem breiterem
+"Hit"-Pfad je Draht fürs Anklicken, Info-Zeile mit "Von → Nach" bei Klick,
+erneuter Klick oder Klick auf freie Fläche hebt die Auswahl wieder auf.
+PDF bleibt die primäre Referenz, die neue HTML-Seite ist der interaktive
+Browser-Companion dazu - beide bei künftigen Pin-Änderungen synchron
+halten.
+
+Getestet mit Headless Chrome (`--dump-dom` + synthetischer Klick per
+`MouseEvent`/`dispatchEvent`, hier auf Draht `w6` GPIO21→OLED SDA):
+korrektes Hervorheben (1 aktiv, 6 gedimmt) und korrekter Info-Text. Kein
+Board nötig, rein clientseitiges HTML/JS ohne Firmware-Bezug.
