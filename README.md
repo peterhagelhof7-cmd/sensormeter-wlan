@@ -67,7 +67,10 @@ erstes Gerät läuft über mehrere Test-/Update-Zyklen stabil auf echter
 Hardware (DHT22, OLED, WLAN inkl. Fallback-AP, Taster, Webserver, SNMP,
 Syslog alle verifiziert), siehe
 [docs/implementierungsplan.html](docs/implementierungsplan.html) und
-[docs/entscheidungen.md](docs/entscheidungen.md).
+[docs/entscheidungen.md](docs/entscheidungen.md). MQTT/Home-Assistant-
+Anbindung ist geflasht und bootet sauber (deaktiviert per Default), aber
+noch nicht gegen einen echten Broker/Home-Assistant-Instanz
+durchgetestet — siehe `docs/entscheidungen.md`.
 
 Am schnellsten per PowerShell-Skript einrichten (installiert Python/Git/
 PlatformIO bei Bedarf automatisch, klont/aktualisiert das Repo, baut und
@@ -120,6 +123,9 @@ Enthalten (P0–P7, siehe [docs/implementierungsplan.html](docs/implementierungs
   OTA per `.bin`-Upload, Design an das Sensormeter-Display-Projekt angepasst
 - `SNMPManager`: SNMP v1/v2c read-only unter `.1.3.6.1.4.1.99999.x`
 - `SyslogManager`: Statusreport je Sensorzyklus + sofortige Fehler-Events per UDP 514
+- `MqttManager`: optionale Home-Assistant-Anbindung per MQTT-Discovery
+  (Sensor-Rolle, Temperatur/Luftfeuchte) — deaktiviert, solange kein
+  Broker konfiguriert ist; siehe `docs/entscheidungen.md`
 
 Partitionstabelle bereits verifiziert (`gen_esp32part.py`): das
 Standardschema für `esp32dev` bringt `ota_0`/`ota_1` von Haus aus mit,

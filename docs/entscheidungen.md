@@ -641,5 +641,11 @@ Mit `pio run` gebaut und verifiziert, per `pio run --target upload
 bestätigt sauberen Start (`[MQTT] Grundgeruest bereit` direkt nach dem
 Syslog-Init, normaler WLAN-Connect/RUN_NORMAL-Übergang, kein Crash-Loop).
 `docs/lastenheft.txt` (neuer Abschnitt 14) und `docs/pflichtenheft.txt`
-(Abschnitte 2/3.7/4.3/11) sowie `docs/admin-guide.html`/`.pdf`
-entsprechend ergänzt.
+(Abschnitte 2/3.7/4.3/11) sowie `docs/admin-guide.html`/`.pdf` und
+`docs/sensormeter-wlan-onepager.html`/`.pdf` entsprechend ergänzt.
+
+**Noch offen:** MQTT ist per Default deaktiviert (kein Broker
+konfiguriert) und wurde bisher nur so getestet (sauberer Boot ohne
+Verbindungsversuch). Ein Test gegen einen echten Broker/Home-Assistant-
+Instanz (Discovery, Reconnect-Verhalten, Statuswerte in Home Assistant
+sichtbar) steht noch aus.
