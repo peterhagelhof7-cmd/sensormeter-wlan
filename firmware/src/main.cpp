@@ -10,7 +10,9 @@
 // lokalen OTA-Upload bereit (async, Port 80); SNMPManager beantwortet
 // SNMP-v1/v2c-GET-Anfragen read-only (Port 161); SyslogManager sendet bei
 // jedem Sensorzyklus einen Statusreport sowie Fehler-Events sofort per UDP
-// (Port 514).
+// (Port 514); MqttManager veroeffentlicht bei aktivierter Home-Assistant-
+// Anbindung Discovery- und State-Payloads per MQTT (siehe
+// sensormeter-poe/repo/docs/lastenheft.txt Abschnitt 16, docs/entscheidungen.md).
 //
 // Damit sind alle Phasen aus docs/implementierungsplan.html (P0-P7)
 // umgesetzt.
@@ -22,6 +24,7 @@
 #include "ConfigManager.h"
 #include "DataManager.h"
 #include "DisplayManager.h"
+#include "MqttManager.h"
 #include "NetworkManager.h"
 #include "OtaManager.h"
 #include "SNMPManager.h"
@@ -49,6 +52,7 @@ OtaManager otaManager;
 WebServerManager webServerManager(dataManager, configManager, networkManager, otaManager, timeManager);
 SNMPManager snmpManager(dataManager, configManager, networkManager);
 SyslogManager syslogManager(dataManager, configManager, networkManager, timeManager);
+MqttManager mqttManager(dataManager, configManager, networkManager);
 
 void setup() {
   Serial.begin(115200);
@@ -68,6 +72,7 @@ void setup() {
   sensorManager.begin();
   displayManager.begin();
   syslogManager.begin();
+  mqttManager.begin();
 
   networkManager.begin();     // setzt Zustand auf INIT, dann WLAN_CHECK
   webServerManager.begin();   // async - kein eigener loop()-Aufruf noetig
@@ -81,6 +86,7 @@ void loop() {
   displayManager.loop();
   snmpManager.loop();
   syslogManager.loop();
+  mqttManager.loop();
 
   // Einmaliger mDNS-Start, sobald eine WLAN-IP vorliegt (auch im Fallback-
   // Netz "installer") - vor RUN_NORMAL ist noch keine IP vergeben.

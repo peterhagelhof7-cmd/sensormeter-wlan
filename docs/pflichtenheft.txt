@@ -64,6 +64,15 @@ Task: SyslogTask
 - UDP Versand bei jedem Sensorzyklus
 - Fehler-Events sofort senden
 
+Task: MqttTask
+- Nur aktiv, wenn in config.xml <mqtt enabled="true"> und Broker-Adresse
+  gesetzt (siehe Abschnitt 3.7)
+- Verbindungsaufbau throttled (alle 5s ein Versuch, kein Busy-Loop)
+- Home-Assistant-Discovery-Payloads (retained) nach jedem
+  (Wieder-)Verbindungsaufbau
+- Statuswerte bei jedem Sensorzyklus (gleiches Erkennungsmuster wie
+  SyslogTask: Aenderung von lastReadMillis, kein eigener Timer)
+
 ------------------------------------------------------------
 
 3. SOFTWAREMODULE
@@ -103,6 +112,19 @@ DataManager als Vorbild):
 3.6 SensorManager
 - Ein DHT22 (kein Sensor-2-Zweig, kein RJ45)
 
+3.7 MqttManager
+- Home-Assistant-Anbindung per MQTT-Discovery (PubSubClient), siehe
+  docs/lastenheft.txt Abschnitt 14 sowie
+  sensormeter-poe/repo/docs/lastenheft.txt Abschnitt 16 fuer das
+  vollstaendige Feature-Design (dort inkl. Relais/Aktor-Rolle, hier nur
+  Sensor-Rolle, da kein RJ45-Modularanschluss vorhanden)
+- topicPrefix() nutzt dieselbe Sanitisierung wie der mDNS-Hostname
+  (NetworkManager::sanitizeHostname) statt eines eigenen gespeicherten
+  Feldes
+- Reconnect throttled (5s-Intervall), Discovery wird nach jedem
+  (Wieder-)Verbindungsaufbau neu gesendet (kein Persistenz-Aufwand fuer
+  "schon gesendet" ueber einen Reconnect hinweg noetig)
+
 ------------------------------------------------------------
 
 4. DATENSPEICHERUNG
@@ -124,6 +146,8 @@ struct HourValue {
 4.3 config.xml
 - Systemkonfiguration
 - WLAN-Parameter (kein LAN-Abschnitt)
+- MQTT-Parameter (enabled/server/port/user/password) - Topic-Praefix wird
+  NICHT gespeichert, siehe 3.7
 
 ------------------------------------------------------------
 
@@ -239,5 +263,8 @@ Fallback:
   vorgesehen (Abgrenzung zum Sensormeter/Sensormeter-PRO-Projekt, das
   genau das bereits abdeckt) - vermeidet doppelten Funktionsumfang
   zwischen den beiden Produktlinien
-- MQTT optional denkbar, aber nicht Teil dieses Lastenhefts
-- Cloud-Integration bewusst ausgeschlossen
+- MQTT/Home-Assistant-Anbindung umgesetzt (Abschnitt 2 MqttTask, 3.7
+  MqttManager, docs/lastenheft.txt Abschnitt 14) - Sensor-Rolle, kein
+  Relais/Aktor, siehe docs/entscheidungen.md fuer die
+  Ressourcenkosten-Messung
+- Cloud-Integration darüber hinaus bewusst ausgeschlossen

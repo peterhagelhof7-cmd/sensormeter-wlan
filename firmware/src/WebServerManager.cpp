@@ -244,6 +244,17 @@ String WebServerManager::buildSettingsPageBody() const {
   html += "<label>Community<input type=\"text\" name=\"snmpCommunity\" value=\"" + cfg.snmpCommunity + "\"></label>";
   html += "</div>";
 
+  html += "<div class=\"block\"><h2>MQTT (Home Assistant)</h2>";
+  html += "<label><input type=\"checkbox\" name=\"mqttEnabled\" " +
+          String(cfg.mqttEnabled ? "checked" : "") + "> Aktiv</label>";
+  html += "<label>Broker-Adresse<input type=\"text\" name=\"mqttServer\" value=\"" + cfg.mqttServer + "\"></label>";
+  html += "<label>Port<input type=\"text\" name=\"mqttPort\" value=\"" + String(cfg.mqttPort) + "\"></label>";
+  html += "<label>Benutzername<input type=\"text\" name=\"mqttUser\" value=\"" + cfg.mqttUser + "\"></label>";
+  html += "<label>Passwort<input type=\"password\" name=\"mqttPassword\" value=\"" + cfg.mqttPassword + "\"></label>";
+  html += "<p class=\"hint\">Meldet das Geraet per MQTT-Discovery bei Home Assistant an (Sensoren Temperatur/"
+          "Luftfeuchte). Bleibt inaktiv, solange keine Broker-Adresse eingetragen ist.</p>";
+  html += "</div>";
+
   html += "<div class=\"block\"><input type=\"submit\" value=\"Speichern (LittleFS)\"></div>";
   html += "</form>";
 
@@ -448,6 +459,11 @@ void WebServerManager::handleApiConfigGet(AsyncWebServerRequest* request) {
   doc["sensorCalibratedTs"] = cfg.sensorCalibratedTs;
   doc["syslogServer"] = cfg.syslogServer;
   doc["snmpCommunity"] = cfg.snmpCommunity;
+  doc["mqttEnabled"] = cfg.mqttEnabled;
+  doc["mqttServer"] = cfg.mqttServer;
+  doc["mqttPort"] = cfg.mqttPort;
+  doc["mqttUser"] = cfg.mqttUser;
+  doc["mqttPassword"] = cfg.mqttPassword;
 
   String out;
   serializeJson(doc, out);
@@ -496,6 +512,14 @@ void WebServerManager::handleApiConfigPost(AsyncWebServerRequest* request) {
     String community = request->getParam("snmpCommunity", true)->value();
     if (community.length() > 0) cfg.snmpCommunity = community;
   }
+
+  cfg.mqttEnabled = request->hasParam("mqttEnabled", true);
+  if (request->hasParam("mqttServer", true)) cfg.mqttServer = request->getParam("mqttServer", true)->value();
+  if (request->hasParam("mqttPort", true)) {
+    cfg.mqttPort = static_cast<uint16_t>(request->getParam("mqttPort", true)->value().toInt());
+  }
+  if (request->hasParam("mqttUser", true)) cfg.mqttUser = request->getParam("mqttUser", true)->value();
+  if (request->hasParam("mqttPassword", true)) cfg.mqttPassword = request->getParam("mqttPassword", true)->value();
 
   // Kollisions-Check: nur wenn DHCP aus ist UND sich die statische IP
   // gegenueber der aktuell aktiven Adresse tatsaechlich aendert - vermeidet

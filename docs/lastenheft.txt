@@ -17,10 +17,13 @@ Hardware:
 Das System dient zur lokalen und netzwerkbasierten Erfassung, Speicherung
 und Darstellung von Umweltmesswerten (Temperatur, Luftfeuchte). Die Daten
 werden lokal angezeigt, über Webserver bereitgestellt, via SNMP abrufbar
-gemacht und per Syslog versendet. Bewusst reduzierter Funktionsumfang
-gegenüber dem Schwesterprojekt Sensormeter (WT32-ETH01): kein Ethernet,
-kein zweiter Sensor, keine Modularerweiterung – dafür deutlich günstigeres
-Board.
+gemacht und per Syslog versendet. Optional zusätzlich per MQTT an Home
+Assistant angebunden (siehe Abschnitt 14) – eine der vier bei
+sensormeter-poe entworfenen Erweiterungen, die auf dieses Board
+übertragbar war (Details/Prüfung siehe docs/entscheidungen.md). Bewusst
+reduzierter Funktionsumfang gegenüber dem Schwesterprojekt Sensormeter
+(WT32-ETH01): kein Ethernet, kein zweiter Sensor, keine
+Modularerweiterung – dafür deutlich günstigeres Board.
 
 ------------------------------------------------------------
 
@@ -97,6 +100,13 @@ Sensor:
 
 Syslog:
 - Syslog Server IP
+
+MQTT (Home Assistant):
+- MQTT aktiv (Checkbox)
+- Broker-Adresse
+- Port (Default 1883)
+- Benutzername
+- Passwort
 
 Konfiguration:
 - XML Export
@@ -200,6 +210,10 @@ Fehler:
   <syslog>
     <server>0.0.0.0</server>
   </syslog>
+
+  <mqtt enabled="false" server="" port="1883" user="" password="" />
+  <!-- Topic-Praefix wird NICHT gespeichert, sondern zur Laufzeit wie der
+       mDNS-Hostname aus <system><name> abgeleitet, siehe Abschnitt 14. -->
 </config>
 
 10.2 values.csv
@@ -239,9 +253,48 @@ NTP FAIL → Zeit als "nicht synchronisiert" markiert, Betrieb läuft weiter
 
 13. NICHTFUNKTIONALE ANFORDERUNGEN
 - lokal betrieben
-- keine Cloud
+- keine Cloud (MQTT-Broker wird üblicherweise selbst im LAN betrieben,
+  z.B. als Teil einer lokalen Home-Assistant-Installation – kein
+  Fremd-Cloud-Dienst, siehe Abschnitt 14)
 - robustes WLAN-Verhalten (Fallback-AP)
 - geringe Speicherlast
 - wartbar über Webinterface
 - bewusst NICHT erweiterbar um einen zweiten Sensor (siehe Abschnitt 4) –
   dafür existiert bereits Sensormeter PRO (WT32-ETH01)
+
+------------------------------------------------------------
+
+14. HOME-ASSISTANT-INTEGRATION (MQTT)
+
+14.1 Umfang
+Nur Sensor-Rolle (Temperatur, Luftfeuchte) – kein Relais/Aktor, da dieses
+Board keinen RJ45-Modularanschluss besitzt (im Unterschied zu
+sensormeter-poe, siehe dortiges Lastenheft Abschnitt 16.2). Deaktiviert,
+solange auf der Einstellungsseite (Abschnitt 6) keine Broker-Adresse
+eingetragen ist.
+
+14.2 Home-Assistant-Discovery
+Beim (Wieder-)Verbindungsaufbau zum Broker werden retained
+Discovery-Payloads veröffentlicht:
+
+homeassistant/sensor/<topic-praefix>/temperature/config
+homeassistant/sensor/<topic-praefix>/humidity/config
+
+<topic-praefix> wird wie der mDNS-Hostname aus dem Systemnamen abgeleitet
+(gleiche Sanitisierung, siehe NetworkManager). Beide Entities werden über
+einen gemeinsamen "device"-Block in Home Assistant zu einem Gerät
+zusammengefasst.
+
+14.3 Statuswerte
+Bei jedem Sensorzyklus (60s) wird der aktuelle Messwert veröffentlicht:
+
+<topic-praefix>/state   { "temperature": 21.4, "humidity": 53.0 }
+
+Bereits inklusive der auf der Einstellungsseite konfigurierten
+Kalibrierkorrektur (Abschnitt 6, "Sensor") – identisch zu Webseite, OLED
+und SNMP.
+
+14.4 Konfiguration (Einstellungsseite, siehe Abschnitt 6)
+- MQTT aktiv (Checkbox)
+- Broker-Adresse, Port (Default 1883)
+- Benutzername/Passwort (optional, für Broker mit Authentifizierung)

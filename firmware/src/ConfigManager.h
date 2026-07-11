@@ -23,6 +23,7 @@
 //   </syslog>
 //   <sensor tempOffset="0.0" humOffset="0.0" calibratedTs="0"/>
 //   <snmp community="public"/>
+//   <mqtt enabled="false" server="" port="1883" user="" password=""/>
 // </config>
 
 struct DeviceConfig {
@@ -60,6 +61,18 @@ struct DeviceConfig {
   String syslogServer = "0.0.0.0";
 
   String snmpCommunity = "public";
+
+  // Home-Assistant-Anbindung ueber MQTT-Discovery (siehe
+  // sensormeter-poe/repo/docs/lastenheft.txt Abschnitt 16 fuer das
+  // vollstaendige Feature-Design - hier nur die Sensor-Rolle, kein
+  // Relais/Aktor, da dieses Board keinen RJ45-Modularanschluss hat).
+  // Topic-Praefix wird NICHT gespeichert, sondern wie der mDNS-Hostname
+  // zur Laufzeit aus systemName abgeleitet (NetworkManager::sanitizeHostname).
+  bool mqttEnabled = false;
+  String mqttServer;
+  uint16_t mqttPort = 1883;
+  String mqttUser;
+  String mqttPassword;
 };
 
 class ConfigManager {

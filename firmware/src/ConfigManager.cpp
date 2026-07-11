@@ -101,6 +101,15 @@ bool ConfigManager::importXml(const String& xml) {
     if (community.length() > 0) cfg.snmpCommunity = community;
   }
 
+  const XMLElement* mqtt = root->FirstChildElement("mqtt");
+  if (mqtt) {
+    cfg.mqttEnabled = parseBool(mqtt->Attribute("enabled"), cfg.mqttEnabled);
+    cfg.mqttServer = attrOrEmpty(mqtt, "server");
+    cfg.mqttPort = static_cast<uint16_t>(mqtt->UnsignedAttribute("port", cfg.mqttPort));
+    cfg.mqttUser = attrOrEmpty(mqtt, "user");
+    cfg.mqttPassword = attrOrEmpty(mqtt, "password");
+  }
+
   _config = cfg;
   return true;
 }
@@ -148,6 +157,14 @@ String ConfigManager::exportXml() const {
   XMLElement* snmp = doc.NewElement("snmp");
   snmp->SetAttribute("community", _config.snmpCommunity.c_str());
   root->InsertEndChild(snmp);
+
+  XMLElement* mqtt = doc.NewElement("mqtt");
+  mqtt->SetAttribute("enabled", _config.mqttEnabled ? "true" : "false");
+  mqtt->SetAttribute("server", _config.mqttServer.c_str());
+  mqtt->SetAttribute("port", _config.mqttPort);
+  mqtt->SetAttribute("user", _config.mqttUser.c_str());
+  mqtt->SetAttribute("password", _config.mqttPassword.c_str());
+  root->InsertEndChild(mqtt);
 
   XMLPrinter printer;
   doc.Print(&printer);

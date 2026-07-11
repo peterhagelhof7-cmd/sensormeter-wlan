@@ -594,3 +594,52 @@ vereinheitlicht (kein Aenderungsbedarf in diesem Projekt).
 
 Mit `pio run` gebaut und verifiziert (erfolgreich, Flash 80,1 % /
 1.049.497 B, RAM 16,4 % / 53.772 B).
+
+## MQTT/Home-Assistant-Integration umgesetzt
+
+Von den vier bei `sensormeter-poe` entworfenen und für Sensormeter
+(WT32-ETH01) bereits geprüften Portierungs-Kandidaten (siehe dortiges
+`entscheidungen.md`, Abschnitt "Portierungs-Kandidaten aus sensormeter-poe
+geprüft") ist bei Sensormeter WLAN nur MQTT/Home Assistant anwendbar –
+BOOT-Taster ist hier bereits vorhandene, ältere Funktionalität, Sensor-2-
+Auto-Erkennung und Relais/Aktor entfallen strukturell, da dieses Board
+keinen RJ45-Modularanschluss besitzt (siehe "Nur ein Sensor, kein
+Modulstecker/RJ45" oben).
+
+Umsetzung (neuer `MqttManager`, Architekturvorbild `SyslogManager` –
+gleiches Muster: Statuspublikation erkannt an einer Änderung von
+`lastReadMillis` statt über einen eigenen Timer):
+- `ConfigManager`: neuer `<mqtt enabled="" server="" port="" user=""
+  password=""/>`-Abschnitt in `config.xml`. Topic-Präfix wird NICHT
+  gespeichert, sondern wie der mDNS-Hostname zur Laufzeit aus dem
+  Systemnamen abgeleitet (`NetworkManager::sanitizeHostname`).
+- `MqttManager`: `PubSubClient`, throttlter Reconnect (5s-Intervall),
+  Home-Assistant-Discovery (retained, `homeassistant/sensor/<prefix>/...`)
+  nach jedem (Wieder-)Verbindungsaufbau, Statuswerte unter
+  `<prefix>/state` bei jedem Sensorzyklus. Nur Sensor-Rolle (Temperatur,
+  Luftfeuchte) – kein Relais/Aktor, siehe oben.
+- `WebServerManager`: neuer Einstellungsblock "MQTT (Home Assistant)"
+  (Aktiv-Checkbox, Broker-Adresse, Port, Benutzername, Passwort), gleiches
+  Formularmuster wie Syslog/SNMP.
+- Deaktiviert per Default (`mqttEnabled=false`), solange keine
+  Broker-Adresse eingetragen ist – kein Verhaltensunterschied für
+  bestehende Installationen ohne Home Assistant.
+
+Ressourcenkosten empirisch (nicht nur geschätzt) gemessen: gegenüber dem
+letzten Eintrag oben (Flash 80,1 % / 1.049.497 B, RAM 16,4 % / 53.772 B)
+liegt der fertige, real gebaute Stand bei **Flash 82,1 % / 1.075.673 B,
+RAM 16,5 % / 53.972 B** – also **+26.176 Byte Flash, +200 Byte RAM**
+für PubSubClient inklusive `MqttManager`, `ConfigManager`-Erweiterung und
+Web-UI/API-Anbindung zusammen (mehr als die reine
+Bibliotheks-Testmessung bei Sensormeter, da hier auch der komplette
+Manager samt Discovery-/State-Publishing-Code enthalten ist, nicht nur
+Server/Connect/Publish-Aufrufe). Bei rund 235 KB freiem Flash weiterhin
+deutlich unkritisch.
+
+Mit `pio run` gebaut und verifiziert, per `pio run --target upload
+--upload-port COM5` auf das angeschlossene Board geflasht. Boot-Log
+bestätigt sauberen Start (`[MQTT] Grundgeruest bereit` direkt nach dem
+Syslog-Init, normaler WLAN-Connect/RUN_NORMAL-Übergang, kein Crash-Loop).
+`docs/lastenheft.txt` (neuer Abschnitt 14) und `docs/pflichtenheft.txt`
+(Abschnitte 2/3.7/4.3/11) sowie `docs/admin-guide.html`/`.pdf`
+entsprechend ergänzt.
