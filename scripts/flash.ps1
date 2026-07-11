@@ -1,17 +1,18 @@
 <#
 .SYNOPSIS
-  Installiert alle Abhaengigkeiten und flasht eines der drei Sensormeter-
-  Firmware-Projekte (Sensormeter / Sensormeter WLAN / Sensormeter Display)
-  auf einem beliebigen Windows-PC.
+  Installiert alle Abhaengigkeiten und flasht eines der vier Sensormeter-
+  Firmware-Projekte (Sensormeter / Sensormeter WLAN / Sensormeter Display /
+  Sensormeter PoE) auf einem beliebigen Windows-PC.
 
 .DESCRIPTION
-  Fragt zuerst interaktiv (oder per -Project), welches der drei
+  Fragt zuerst interaktiv (oder per -Project), welches der vier
   Schwesterprojekte geflasht werden soll:
     1) Sensormeter        (WT32-ETH01, Ethernet + bis zu 2 Sensoren)
     2) Sensormeter WLAN    (generisches ESP32-WROOM-32-DevKit, WLAN-only)
     3) Sensormeter Display (ESP32-Touchdisplay, SNMP-Client)
+    4) Sensormeter PoE     (ESP32-S3-ETH, W5500 + WLAN, RJ45-Modul + Relais)
 
-  Anschliessend identischer Ablauf fuer alle drei:
+  Anschliessend identischer Ablauf fuer alle vier:
   - Installiert Python + PlatformIO, falls nicht vorhanden (ueber winget/pip)
   - Installiert Git, falls nicht vorhanden (ueber winget)
   - Klont das gewaehlte Repository, falls unter -RepoPath noch kein
@@ -22,11 +23,10 @@
   - Baut die Firmware (pio run) zur Kontrolle
   - Flasht sie auf das per USB angeschlossene Board (pio run --target upload)
 
-  Dieses Skript liegt identisch in allen drei Repos (scripts/flash.ps1) -
-  unabhaengig davon, welches der drei Projekte gerade lokal ausgecheckt ist,
-  laesst sich darueber jedes der drei flashen (die jeweils anderen beiden
-  werden bei Bedarf automatisch in einen Unterordner neben dem Skript
-  geklont).
+  Dieses Skript liegt identisch in allen vier Repos (scripts/flash.ps1) -
+  unabhaengig davon, welches der vier Projekte gerade lokal ausgecheckt ist,
+  laesst sich darueber jedes der vier flashen (die jeweils anderen werden
+  bei Bedarf automatisch in einen Unterordner neben dem Skript geklont).
 
   Abhaengigkeits-Erkennung ist bewusst "funktional" (ruft z.B. "python
   --version" auf und prueft die Ausgabe), nicht nur eine PATH-Pruefung:
@@ -38,9 +38,27 @@
   (winget liefert z.B. bei "bereits installiert, kein Update verfuegbar"
   einen Nicht-Null-Exitcode, obwohl das kein Fehler ist).
 
+  WICHTIG - Mehrere Projekte auf demselben Rechner: Sensormeter PoE nutzt
+  eine andere PlatformIO-Platform (den Community-Fork "pioarduino", noetig
+  fuer W5500-Ethernet-Support unter Arduino-ESP32 3.x, siehe dortiges
+  docs/entscheidungen.md) als die anderen drei Projekte (offizielles
+  "espressif32", Arduino-ESP32 2.0.17). Beide registrieren Platform- und
+  Framework-Pakete unter DENSELBEN Namen in PlatformIOs global geteiltem
+  Paket-Pool (~/.platformio) - ein Sensormeter-PoE-Build ohne Isolation
+  wuerde die von den anderen drei Projekten benoetigten Pakete
+  ueberschreiben und deren naechsten Build zum Absturz bringen (real
+  passiert, siehe sensormeter-poe/docs/entscheidungen.md). Das ist bereits
+  geloest: Sensormeter PoEs eigene firmware/platformio.ini setzt
+  "core_dir = .pio-core" und isoliert damit alle eigenen Pakete vollstaendig
+  vom globalen Pool - dieses Skript muss dafuer nichts Zusaetzliches tun,
+  einfach "pio run"/"pio run --target upload" wie bei den anderen drei
+  Projekten auch. Wichtig ist nur: diese core_dir-Einstellung in Sensormeter
+  PoEs platformio.ini darf nicht entfernt werden, sonst wiederholt sich das
+  Problem beim naechsten gemeinsamen Einsatz auf demselben Rechner.
+
 .PARAMETER Project
-  "sensormeter", "wlan" oder "display". Wird weggelassen, fragt das Skript
-  interaktiv nach (Eingabe von 1/2/3 oder dem Projektnamen).
+  "sensormeter", "wlan", "display" oder "poe". Wird weggelassen, fragt das
+  Skript interaktiv nach (Eingabe von 1/2/3/4 oder dem Projektnamen).
 
 .PARAMETER RepoPath
   Zielordner fuer den Checkout, falls das gewaehlte Repo dort noch nicht
@@ -63,11 +81,14 @@
 
 .EXAMPLE
   .\flash.ps1 -Project display -RepoPath C:\Projekte\sensormeter-display -SkipUpload
+
+.EXAMPLE
+  .\flash.ps1 -Project poe -SkipUpload
 #>
 
 [CmdletBinding()]
 param(
-  [ValidateSet("sensormeter", "wlan", "display")]
+  [ValidateSet("sensormeter", "wlan", "display", "poe")]
   [string]$Project,
   [string]$RepoPath,
   [string]$Port,
@@ -75,6 +96,19 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# ------------------------------------------------------------------
+# Versionierung dieses Skripts (unabhaengig von den Firmware-Versionen der
+# einzelnen Projekte) - liegt identisch in vier Repos, daher hier verfolgt,
+# damit erkennbar ist, ob eine lokal vorliegende Kopie veraltet ist.
+#
+# Changelog:
+#   1.1.0 (2026-07-11) - Sensormeter PoE als viertes Projekt ergaenzt,
+#                         Hinweis zur PlatformIO-Paket-Pool-Isolation
+#                         zwischen "espressif32" und "pioarduino" ergaenzt.
+#   1.0.0 (2026-07-10) - Erste versionierte Fassung (Sensormeter,
+#                         Sensormeter WLAN, Sensormeter Display).
+$FlashScriptVersion = "1.1.0"
 
 $Projects = @{
   "sensormeter" = @{
@@ -101,7 +135,17 @@ $Projects = @{
     FlashNote   = "Board per USB-Kabel anschliessen - ggf. CH340-Treiber installieren."
     SuccessNote = "Beim ersten Start: Touch-Kalibrierung durchfuehren, dann WLAN einrichten (siehe README.md)."
   }
+  "poe" = @{
+    DisplayName = "Sensormeter PoE (ESP32-S3-ETH, W5500 + WLAN, RJ45-Modul + Relais)"
+    RepoUrl     = "https://github.com/peterhagelhof7-cmd/sensormeter-poe.git"
+    FolderName  = "sensormeter-poe"
+    HasConfigH  = $true
+    FlashNote   = "Board per USB-C-Kabel anschliessen. Erster Build laedt eine eigene, isolierte PlatformIO-Toolchain herunter (siehe Skript-Hinweis oben zu 'pioarduino') - dauert deutlich laenger als bei den anderen drei Projekten und braucht Internetzugang. Bislang nur per 'pio run' gebaut/verifiziert, nicht auf echter Hardware getestet (siehe docs/entscheidungen.md) - beim ersten Flashen entsprechend aufmerksam pruefen."
+    SuccessNote = "Beim ersten Start: RJ45-Modul-Erkennung laeuft automatisch waehrend des Boot-Countdowns; WLAN/Ethernet und ggf. MQTT ueber die Weboberflaeche einrichten (siehe docs/lastenheft.txt)."
+  }
 }
+
+Write-Host "Sensormeter Flash-Skript v$FlashScriptVersion" -ForegroundColor DarkGray
 
 function Write-Step {
   param([string]$Text)
@@ -115,18 +159,21 @@ if (-not $Project) {
   Write-Host "  1) $($Projects['sensormeter'].DisplayName)"
   Write-Host "  2) $($Projects['wlan'].DisplayName)"
   Write-Host "  3) $($Projects['display'].DisplayName)"
+  Write-Host "  4) $($Projects['poe'].DisplayName)"
   do {
-    $choice = Read-Host "Auswahl [1-3]"
+    $choice = Read-Host "Auswahl [1-4]"
     $Project = switch ($choice) {
       "1" { "sensormeter" }
       "2" { "wlan" }
       "3" { "display" }
+      "4" { "poe" }
       "sensormeter" { "sensormeter" }
       "wlan" { "wlan" }
       "display" { "display" }
+      "poe" { "poe" }
       default { $null }
     }
-    if (-not $Project) { Write-Host "Ungueltige Eingabe - bitte 1, 2, 3 oder den Projektnamen eingeben." -ForegroundColor Yellow }
+    if (-not $Project) { Write-Host "Ungueltige Eingabe - bitte 1, 2, 3, 4 oder den Projektnamen eingeben." -ForegroundColor Yellow }
   } while (-not $Project)
 }
 
