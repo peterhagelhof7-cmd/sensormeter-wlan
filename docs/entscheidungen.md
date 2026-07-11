@@ -844,3 +844,35 @@ Getestet mit Headless Chrome (`--dump-dom` + synthetischer Klick per
 `MouseEvent`/`dispatchEvent`, hier auf Draht `w6` GPIO21→OLED SDA):
 korrektes Hervorheben (1 aktiv, 6 gedimmt) und korrekter Info-Text. Kein
 Board nötig, rein clientseitiges HTML/JS ohne Firmware-Bezug.
+
+## Architekturübersicht auf vier Familienmitglieder erweitert, Sensormeter PoE ergänzt
+
+`docs/projektfamilie.html` (identische Kopie in allen fünf
+Sensormeter-Repos) zeigte bisher nur drei Karten (Sensormeter, Sensormeter
+WLAN, Sensormeter Display) - Sensormeter PoE fehlte komplett, obwohl es
+seit einiger Zeit ein vollwertiges viertes Familienmitglied ist. Nutzer
+wies darauf hin, dass im Family-Repo die Übersicht sogar ganz fehlte.
+
+Diagramm neu aufgebaut: drei Karten oben (WLAN/Sensormeter/PoE, Sensormeter
+als Ursprung in der Mitte, dünne durchgezogene Linien zu den beiden
+Varianten), Sensormeter Display darunter zentriert mit gestrichelten
+SNMP-Linien zu allen drei. Neue Akzentfarbe `--rust` (Blitz-Icon) für PoE
+ergänzt - fehlte bisher in `projektfamilie.html` (existierte nur in
+`implementierungsplan.html`, dort wiederum ohne "-strong"-Variante).
+
+Positionierung nicht mehr aus dem alten 3-Karten-Layout übernommen,
+sondern per Skript (`getBoundingClientRect()` auf einer Kopie mit
+angehängtem Mess-Script, da echte Karteninhalte wegen Zeilenumbruch bei
+PoE deutlich höher sind als angenommen - 372px statt der ursprünglich
+angenommenen ~240px) neu vermessen, um Überlappung mit den gestrichelten
+SNMP-Linien zu vermeiden.
+
+`docs/projektfamilie-light.png`/`-dark.png` (statische Vorschaubilder fürs
+GitHub-README, da GitHub keine CSS-Media-Queries im Markdown auswertet)
+aus dem aktualisierten Inhalt neu gerendert. README-Text ("wie die drei
+Sensormeter-Projekte") und Bild-Alt-Text ebenfalls auf vier Projekte
+korrigiert.
+
+Getestet: Headless-Chrome-Screenshots hell/dunkel, `getBoundingClientRect()`-
+Vermessung aller vier Karten (keine Überlappung mehr). Rein statisches
+HTML/CSS/SVG ohne Firmware-Bezug, kein Board nötig.
