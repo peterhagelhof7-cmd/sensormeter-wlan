@@ -36,6 +36,8 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/entscheidungen.md](docs/entscheidungen.md) | Entscheidungsprotokoll: Boardwahl, Pinbelegung, OTA-Partitionierung, SNMP-Kompatibilität, bekannte Abweichungen |
 | [docs/verdrahtung.pdf](docs/verdrahtung.pdf) | Pin-Tabelle + Verdrahtungsskizze (DHT22, OLED) |
 | [docs/admin-guide.pdf](docs/admin-guide.pdf) | Admin-Guide: Inbetriebnahme, OLED-Anzeige, Weboberfläche, SNMP/Syslog/MQTT |
+| [docs/PRTG.md](docs/PRTG.md) | PRTG-Integration: OIDs, Geräte-Template-Import, Sensor-Übersicht |
+| [docs/prtg-template-sensormeter-wlan.odt](docs/prtg-template-sensormeter-wlan.odt) | Fertiges PRTG-Geräte-Template für Auto-Discovery |
 | [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display): Abhängigkeiten installieren, Repo holen, bauen, flashen |
 
 Dieses Projekt hat (im Unterschied zu den beiden Schwesterprojekten) keine
