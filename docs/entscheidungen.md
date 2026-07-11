@@ -970,3 +970,61 @@ verloren, keine Tabellen/Code-Blöcke überlaufen) sowie gezielt Abschnitt 8
 auf korrekte Darstellung der PowerShell-Codeblöcke und der
 Beispielsitzung geprüft. Rein statisches HTML/CSS ohne Firmware-Bezug,
 kein Board nötig.
+
+## Werksreset-Button im Webserver um Umfangsauswahl erweitert (v0.9.0-rc4)
+
+Auf Anfrage: der bisherige Werksreset auf der Einstellungsseite kannte nur
+zwei feste Stufen ("nur Einstellungen" / "Einstellungen + Daten") und
+behandelte Anbieter-Branding nie als eigenen Umfang - ein Branding-Reset
+war nur indirekt über einen vollen Konfigurations-Reset möglich (der dann
+zwangsläufig auch WLAN/Passwort/Kalibrierung mitgelöscht hätte), oder
+manuell über den separaten "Logo entfernen"-Button (der wiederum den
+Anbietername nicht mit zurücksetzte). Jetzt ein Auswahlmenü mit vier
+Umfängen statt zwei Buttons:
+
+- **Alles** - `config.xml` auf Werkswerte, `/history.csv` gelöscht,
+  Branding-Logo-Datei gelöscht (per `BrandingManager::deleteLogo()`,
+  bisher an dieser Stelle **nicht** aufgerufen - echte Lücke, die
+  Logo-Datei blieb bei einem "Einstellungen + Daten"-Reset bisher liegen)
+- **Nur Konfiguration** - `config.xml` auf Werkswerte, aber
+  `brandingVendorName` bewusst aus der aktuellen Config in ein frisches
+  `DeviceConfig` herübergerettet, bevor gespeichert wird - Branding bleibt
+  vollständig erhalten (Name + Logo)
+- **Nur Messwerte** - ausschließlich `LittleFS.remove("/history.csv")`,
+  `config.xml` komplett unangetastet
+- **Nur Anbieter-Branding** - nur `brandingVendorName` geleert und
+  `deleteLogo()` aufgerufen, alle übrigen Felder unangetastet (praktisch
+  identisch zum bestehenden "Logo entfernen"-Button, zusätzlich mit
+  Namensreset)
+
+Bestätigungsdialog (`confirm()`) nennt jetzt den tatsächlich gewählten
+Umfang statt eines generischen Textes, damit vor dem Absenden klar ist,
+was konkret verloren geht.
+
+**Bewusst nicht angefasst**: der BOOT-Taster-Reset (`DisplayManager.cpp`)
+und die Serial-Kommandos `reset`/`reset all` (siehe oben) behalten ihr
+bisheriges, einfacheres Verhalten (kompletter `DeviceConfig()`-Reset ohne
+Branding-Erhalt, keine Logo-Löschung) - beides sind eigenständige
+Codepfade außerhalb der Weboberfläche, die Anfrage bezog sich explizit auf
+"den Werksreset-Knopf im Webserver". Admin-Guide-Querverweise auf diese
+beiden Pfade entsprechend präzisiert (Abschnitt 3.1 und 8.1), da sie sich
+jetzt inhaltlich leicht vom neuen Web-Umfang "Nur Konfiguration"
+unterscheiden (Taster/Serial setzen den Anbietername mit zurück, die Logo-
+Datei bleibt bei ihnen aber bestehen).
+
+Firmware-Version auf `0.9.0-rc4` (Beta) angehoben (`config.h` und
+`config.h.example`) - einzige Quelle für `DEVICE_FIRMWARE_VERSION`, wird
+über Praeprozessor-Guards in mehreren `.cpp`-Dateien mitverwendet.
+
+Mit `pio run` gebaut und verifiziert (Flash 83,1 % / 1.089.241 B, RAM
+17,5 % / 57.236 B - ein Zuwachs von nur +1.084 B Flash gegenüber dem
+vorherigen Stand). Geflasht und per Serial-Boot-Log bestätigt: sauberer
+Durchlauf `INIT → WLAN_CHECK → RUN_NORMAL`, Banner zeigt korrekt
+"Sensormeter WLAN 0.9.0-rc4", bestehende Konfiguration (WLAN `SPS-GMBH`,
+statische IP `192.168.77.9`) unverändert übernommen. Die neue
+Umfangsauswahl selbst konnte mangels Netzroute zum Gerät (siehe frühere
+Protokoll-Abschnitte) nicht per Browser/HTTP live durchgeklickt werden -
+die zugrundeliegenden Bausteine (`DeviceConfig()`-Reset,
+`LittleFS.remove("/history.csv")`, `_branding.deleteLogo()`) sind aber
+jeweils bereits einzeln über andere Codepfade (Serial-`reset`/`reset all`,
+bestehender "Logo entfernen"-Button) live erprobt.

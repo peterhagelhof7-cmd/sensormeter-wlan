@@ -71,7 +71,7 @@ Sensormeter-Projekts.
 
 `firmware/` ist ein PlatformIO-Projekt (Board `esp32dev`, Framework Arduino).
 
-**Version:** `0.9.0-rc3` (Beta) — Versionsschema siehe
+**Version:** `0.9.0-rc4` (Beta) — Versionsschema siehe
 [docs/entscheidungen.md](docs/entscheidungen.md#versionierung).
 
 Aktueller Stand: **P0–P7 code-vollständig, Board-Bringup abgeschlossen** —

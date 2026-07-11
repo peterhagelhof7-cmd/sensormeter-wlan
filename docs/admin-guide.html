@@ -155,7 +155,7 @@
   </div>
   <div class="subtitle">Admin-Guide — Inbetriebnahme, OLED-Anzeige und Konfiguration über die Weboberfläche</div>
   <div class="badges">
-    <span class="badge badge-orange">v0.9.0-rc3 · Beta</span>
+    <span class="badge badge-orange">v0.9.0-rc4 · Beta</span>
     <span class="badge">ESP32-WROOM-32 DevKit · WLAN-only</span>
     <span class="badge">DHT22 · OLED · Webserver · SNMP · Syslog · MQTT/HA · Branding · OTA</span>
     <span class="badge">github.com/peterhagelhof7-cmd/sensormeter-wlan</span>
@@ -413,7 +413,7 @@ bis sie komplett zu lesen war, statt die Schrift zu verkleinern.</p>
 <div class="sketch-wrap">
   <div class="device"><div class="screen">
     <div class="oled-text" style="top:4mm; font-size:4mm; font-weight:700;">WLAN OK</div>
-    <div class="oled-text" style="top:12mm; font-size:3.6mm; font-weight:700;">v0.9.0-rc3</div>
+    <div class="oled-text" style="top:12mm; font-size:3.6mm; font-weight:700;">v0.9.0-rc4</div>
     <div class="oled-text" style="top:19mm; font-size:3.2mm;">Sensormeter WLAN</div>
   </div></div>
   <div class="sketch-notes">
@@ -511,11 +511,13 @@ des Bootens oder im Fallback-Modus:</p>
 
 <div class="callout">
   <div class="callout-title">Was wird zurückgesetzt?</div>
-  Der Taster-Reset entspricht dem Button „Werksreset (nur Einstellungen)"
-  auf der Einstellungsseite (Abschnitt 4.2): WLAN-Zugangsdaten,
-  Web-Passwort, Kalibrierung, Syslog-/SNMP-Einstellungen werden auf
-  Werkswerte zurückgesetzt und das Gerät startet neu. Der gespeicherte
-  7-Tage-Verlauf bleibt dabei erhalten. Praktisch für den Fall, dass das
+  Der Taster-Reset entspricht dem Umfang „Nur Konfiguration" auf der
+  Einstellungsseite (Abschnitt 4.2), allerdings ohne dessen Branding-Erhalt:
+  WLAN-Zugangsdaten, Web-Passwort, Kalibrierung, Syslog-/SNMP-Einstellungen
+  <b>und</b> der Anbietername werden auf Werkswerte zurückgesetzt (ein
+  hinterlegtes Logo bleibt als Datei bestehen), das Gerät startet neu. Der
+  gespeicherte 7-Tage-Verlauf bleibt dabei erhalten. Praktisch für den Fall,
+  dass das
   Gerät wegen falscher WLAN-Zugangsdaten gar nicht mehr über das Netzwerk
   erreichbar ist — funktioniert komplett ohne PC/USB. Dasselbe lässt sich
   bei angeschlossenem USB-Kabel auch über das <span class="code">reset</span>-Kommando
@@ -643,16 +645,24 @@ Aufbau der Datei: Abschnitt 7.1. Dieselbe Export-/Import-Logik steht auch
 per USB über die Serial-Kommandozeile zur Verfügung (Abschnitt 8,
 Kommandos <span class="code">dump</span>/<span class="code">upload</span>) —
 praktisch, wenn das Gerät gerade nicht im Netzwerk erreichbar ist.</p>
+<p>Ein Auswahlmenü legt fest, welcher Umfang zurückgesetzt wird, bevor der
+Button „Werksreset durchführen" ausgelöst wird (Bestätigungsdialog nennt
+den gewählten Umfang noch einmal):</p>
 <div class="keep">
 <table>
-  <tr><th>Button</th><th>Wirkung</th></tr>
-  <tr><td>Werksreset (nur Einstellungen)</td><td>Setzt <span class="code">config.xml</span> auf Werkswerte zurück (WLAN-Zugangsdaten, Web-Passwort, Kalibrierung, Syslog/SNMP-Einstellungen). Der 7-Tage-Verlauf bleibt erhalten.</td></tr>
-  <tr><td>Werksreset (Einstellungen + Daten)</td><td>Wie oben, zusätzlich wird der gespeicherte 7-Tage-Verlauf gelöscht. Nicht rückgängig zu machen.</td></tr>
+  <tr><th>Umfang</th><th>Wirkung</th></tr>
+  <tr><td>Alles</td><td>Setzt <span class="code">config.xml</span> auf Werkswerte zurück (WLAN-Zugangsdaten, Web-Passwort, Kalibrierung, Syslog/SNMP/MQTT-Einstellungen), löscht den 7-Tage-Verlauf <b>und</b> das Anbieter-Logo. Nicht rückgängig zu machen.</td></tr>
+  <tr><td>Nur Konfiguration</td><td>Wie oben, aber ohne den 7-Tage-Verlauf und ohne Branding zu löschen — der Anbietername bleibt erhalten, das Logo ebenfalls.</td></tr>
+  <tr><td>Nur Messwerte</td><td>Löscht ausschließlich den 7-Tage-Verlauf. <span class="code">config.xml</span> und Branding bleiben vollständig unangetastet.</td></tr>
+  <tr><td>Nur Anbieter-Branding</td><td>Setzt nur den Anbietername zurück und entfernt ein hinterlegtes Logo (identisch zum „Logo entfernen"-Button oben). Alle übrigen Einstellungen und der Verlauf bleiben unangetastet.</td></tr>
 </table>
-<p>Ist das Gerät im Netzwerk gar nicht erreichbar, lässt sich derselbe
-„nur Einstellungen"-Reset auch direkt am Gerät über den BOOT-Taster
-auslösen (Abschnitt 3.1) oder per USB über die Serial-Kommandozeile
-(Abschnitt 8, Kommando <span class="code">reset</span>).</p>
+<p>Ist das Gerät im Netzwerk gar nicht erreichbar, lässt sich ein reiner
+Einstellungs-Reset auch direkt am Gerät über den BOOT-Taster auslösen
+(Abschnitt 3.1, entspricht dem Umfang „Nur Konfiguration" ohne
+Branding-Erhalt — der Taster setzt den Anbietername mit zurück, löscht
+aber nicht die Logo-Datei) oder per USB über die Serial-Kommandozeile
+(Abschnitt 8, Kommandos <span class="code">reset</span>/<span class="code">reset all</span>,
+dort ebenfalls ohne die granulare Umfangsauswahl der Weboberfläche).</p>
 </div>
 
 <h3>Firmware</h3>
@@ -883,7 +893,7 @@ Baudrate 115200, jede Zeile mit Enter abschließen.</p>
   <tr><td><span class="code">wifi &lt;ssid&gt; &lt;passwort&gt;</span></td><td>Neue WLAN-Zugangsdaten setzen, Gerät startet neu und probiert die Verbindung mit verkürztem Timeout (wie „Verbinden &amp; testen" auf der Einstellungsseite)</td></tr>
   <tr><td><span class="code">dump</span></td><td>Aktuelle <span class="code">config.xml</span> als XML ausgeben, eingerahmt von <span class="code">-----BEGIN CONFIG-----</span>/<span class="code">-----END CONFIG-----</span></td></tr>
   <tr><td><span class="code">upload</span></td><td>Wartet auf eingefügte XML-Zeilen (z. B. eine zuvor per <span class="code">dump</span> gesicherte Konfiguration), Abschluss mit einer Zeile <span class="code">-----END CONFIG-----</span>. Bei gültigem XML wird gespeichert und neu gestartet, bei ungültigem passiert nichts</td></tr>
-  <tr><td><span class="code">reset</span></td><td>Werksreset nur der Einstellungen (wie „Werksreset (nur Einstellungen)" auf der Einstellungsseite), Gerät startet neu — der 7-Tage-Verlauf bleibt erhalten</td></tr>
+  <tr><td><span class="code">reset</span></td><td>Werksreset nur der Konfiguration (wie Umfang „Nur Konfiguration" auf der Einstellungsseite, allerdings ohne dessen Branding-Erhalt — der Anbietername wird mit zurückgesetzt), Gerät startet neu — der 7-Tage-Verlauf bleibt erhalten</td></tr>
   <tr><td><span class="code">reset all</span></td><td>Wie oben, zusätzlich wird der 7-Tage-Verlauf gelöscht. Nicht rückgängig zu machen</td></tr>
 </table>
 
@@ -1002,7 +1012,7 @@ das Gerät kehrte nach diesem Ablauf exakt in den Ausgangszustand zurück
   <tr><td>Webinterface nicht erreichbar</td><td>IP-Adresse über das OLED (Abschnitt 3, Seite 2), <span class="code">http://&lt;systemname&gt;.local/</span> (mDNS) oder per USB das <span class="code">status</span>-Kommando (Abschnitt 8) prüfen; bei kürzlich geänderter Static-IP ggf. neue Adresse verwenden</td></tr>
   <tr><td>Neue statische IP wird als „bereits belegt" abgelehnt</td><td>Ein anderes Gerät im Netz antwortet unter dieser Adresse (Abschnitt 4.2) — im Router/DHCP-Server nachsehen, wer die Adresse belegt, oder eine andere, freie Adresse wählen. Bei einem echten Fehlalarm (z. B. Firewall auf dem anderen Gerät antwortet fälschlich) hilft nur eine andere Adresse, da der Check bewusst konservativ ist</td></tr>
   <tr><td>„IP-Einstellungen übernehmen" meldet „Kein DHCP-Server gefunden"</td><td>Im Zielnetz ist kein DHCP-Server aktiv, oder das Gerät ist gerade nicht mit dem richtigen Netz assoziiert — bei Bedarf stattdessen eine statische IP eintragen (Weboberfläche oder per USB das <span class="code">ip</span>-Kommando, Abschnitt 8), oder DHCP im Router prüfen</td></tr>
-  <tr><td>Web-Login schlägt fehl / Gerät im Netzwerk gar nicht erreichbar</td><td>Benutzername immer „admin"; Passwort wurde ggf. bereits geändert (siehe Abschnitt 4.1) — bei Passwortverlust hilft „Werksreset (nur Einstellungen)" auf der Einstellungsseite (Abschnitt 4.2), der BOOT-Taster direkt am Gerät (3s + 20s halten, dann loslassen, siehe Abschnitt 3.1) oder das <span class="code">reset</span>-Kommando per USB (Abschnitt 8)</td></tr>
+  <tr><td>Web-Login schlägt fehl / Gerät im Netzwerk gar nicht erreichbar</td><td>Benutzername immer „admin"; Passwort wurde ggf. bereits geändert (siehe Abschnitt 4.1) — bei Passwortverlust hilft ein Werksreset mit Umfang „Nur Konfiguration" oder „Alles" auf der Einstellungsseite (Abschnitt 4.2), der BOOT-Taster direkt am Gerät (3s + 20s halten, dann loslassen, siehe Abschnitt 3.1) oder das <span class="code">reset</span>-Kommando per USB (Abschnitt 8)</td></tr>
   <tr><td>SNMP/Syslog liefert keine Daten</td><td>Community-String bzw. Server-IP in den Einstellungen prüfen (Abschnitt 4.2), Firewall auf dem Empfänger prüfen (UDP 161/514)</td></tr>
 </table>
 

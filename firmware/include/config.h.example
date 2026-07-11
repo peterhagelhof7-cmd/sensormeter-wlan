@@ -9,4 +9,4 @@
 // Werte, die zur Kompilierzeit feststehen muessen.
 // ============================================================================
 
-#define DEVICE_FIRMWARE_VERSION "0.9.0-rc3"
+#define DEVICE_FIRMWARE_VERSION "0.9.0-rc4"
