@@ -13,6 +13,8 @@
     --copper-wash: rgba(181, 98, 42, 0.12);
     --patina: #3F6E63;
     --patina-wash: rgba(63, 110, 99, 0.12);
+    --indigo: #3B5B8C;
+    --indigo-strong: #2B4368;
     --rust: #A63D2E;
     --rust-wash: rgba(166, 61, 46, 0.1);
     --shadow: 0 1px 2px rgba(30, 37, 48, 0.06), 0 6px 20px -8px rgba(30, 37, 48, 0.18);
@@ -31,6 +33,8 @@
       --copper-wash: rgba(224, 138, 76, 0.14);
       --patina: #74B7A6;
       --patina-wash: rgba(116, 183, 166, 0.13);
+      --indigo: #7FA0D9;
+      --indigo-strong: #A0BBE6;
       --rust: #E38A78;
       --rust-wash: rgba(227, 138, 120, 0.12);
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -10px rgba(0, 0, 0, 0.55);
@@ -48,6 +52,8 @@
     --copper-wash: rgba(224, 138, 76, 0.14);
     --patina: #74B7A6;
     --patina-wash: rgba(116, 183, 166, 0.13);
+    --indigo: #7FA0D9;
+    --indigo-strong: #A0BBE6;
     --rust: #E38A78;
     --rust-wash: rgba(227, 138, 120, 0.12);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -10px rgba(0, 0, 0, 0.55);
@@ -64,6 +70,8 @@
     --copper-wash: rgba(181, 98, 42, 0.12);
     --patina: #3F6E63;
     --patina-wash: rgba(63, 110, 99, 0.12);
+    --indigo: #3B5B8C;
+    --indigo-strong: #2B4368;
     --rust: #A63D2E;
     --rust-wash: rgba(166, 61, 46, 0.1);
   }
@@ -305,7 +313,17 @@
 <div class="wrap">
   <header>
     <div class="eyebrow">Sensormeter WLAN · ESP32-WROOM-32 DevKit · v0.9.0-rc1 (Beta)</div>
-    <h1>Implementierungsplan</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <svg viewBox="0 0 48 48" fill="none" width="30" height="30" style="flex-shrink:0;">
+        <path d="M24,9 L37.6,32.5 L10.4,32.5 Z" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="24" cy="9" r="5" fill="var(--copper)"/>
+        <circle cx="37.6" cy="32.5" r="5" fill="var(--indigo)"/>
+        <circle cx="10.4" cy="32.5" r="5" fill="var(--patina)"/>
+        <line x1="24" y1="24.67" x2="31.07" y2="17.6" stroke="var(--ink)" stroke-width="2.8" stroke-linecap="round"/>
+        <circle cx="24" cy="24.67" r="2.6" fill="var(--ink)"/>
+      </svg>
+      <h1>Implementierungsplan</h1>
+    </div>
     <p class="lede">
       Reihenfolge von der Projektstruktur bis zur vollständigen Firmware gemäß
       <span class="mono">lastenheft.txt</span> / <span class="mono">pflichtenheft.txt</span>.
