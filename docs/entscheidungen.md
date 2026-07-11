@@ -932,3 +932,41 @@ Mit `pio run` gebaut und verifiziert (Flash 83,0 % / 1.088.157 B, RAM
   `upload` zurückgespielt - Gerät startet neu und verbindet sich wieder
   exakt wie vor dem Reset (`RUN_NORMAL`, SSID `SPS-GMBH`, IP
   `192.168.77.9`). Kein Datenverlust, vollständig wiederhergestellt.
+
+## Serial-Kommandozeile im Admin-Guide dokumentiert, admin-guide.html neu rekonstruiert
+
+Auf Anfrage: die neue Serial-Kommandozeile (siehe Abschnitt oben) sollte
+in den Admin-Guide, inkl. Nutzung mit reinen Windows-Boardmitteln. Anders
+als bei Sensormeter und Sensormeter Display gab es hier bisher **nur**
+`docs/admin-guide.pdf`, keine HTML-Quelle (ähnlich der Situation bei
+`verdrahtungsplan.html` vor dessen Rekonstruktion, siehe dortiges
+Protokoll) - der komplette 13-seitige Inhalt wurde aus dem PDF
+transkribiert und als `docs/admin-guide.html` neu angelegt (identisches
+CSS/Layout-Muster wie `sensormeter/repo/docs/admin-guide.html`: Cover mit
+Familien-Logo, nummerierte Abschnitte, OLED-Seiten-Skizzen, Callout-Boxen),
+dabei gleich die bereits an anderer Stelle gefundenen Textkorrekturen
+("drei" → "vier" Projekte, WLAN/IP-Trennung auf der Einstellungsseite)
+übernommen.
+
+Neuer Abschnitt 8 "Serial-Kommandozeile (USB)":
+- 8.1 Kommandoübersicht - Tabelle aller acht Kommandos
+- 8.2 Nutzung mit Windows-Boardmitteln - bewusst **kein** PuTTY/Tera Term
+  vorausgesetzt (Zusatzsoftware, nicht vorinstalliert), sondern die
+  .NET-Klasse `System.IO.Ports.SerialPort` über PowerShell (ab Windows 7
+  vorinstalliert): COM-Port-Ermittlung, eine interaktive Lese-/Schreib-
+  Schleife als kopierbares Skript, ein Kurzform-Einzeiler für einmalige
+  Abfragen, sowie eine vollständige Beispielsitzung (Backup per `dump`,
+  `reset`, Wiederherstellung per `upload`) - deckt sich mit dem tatsächlich
+  live getesteten Ablauf aus dem vorherigen Protokoll-Abschnitt.
+
+Querverweise ergänzt: Abschnitt 3.1 (Taster-Reset) und 4.2 (Werksreset-
+Buttons, XML-Export/-Import) verweisen jetzt auf die äquivalenten
+Serial-Kommandos; Anhang-Troubleshooting-Zeilen entsprechend erweitert.
+
+PDF aus der neuen HTML-Quelle exportiert (16 statt bisher 13 Seiten,
+457 KB). Geprüft: vollständiger Seiten-für-Seiten-Vergleich der
+gerenderten PDF gegen den ursprünglichen Inhalt (keine Abschnitte
+verloren, keine Tabellen/Code-Blöcke überlaufen) sowie gezielt Abschnitt 8
+auf korrekte Darstellung der PowerShell-Codeblöcke und der
+Beispielsitzung geprüft. Rein statisches HTML/CSS ohne Firmware-Bezug,
+kein Board nötig.
