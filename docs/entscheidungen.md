@@ -1063,3 +1063,11 @@ dieser Sitzung per `pio run --target uploadfs` gesetzt) - das bestätigt
 genau den "bereits vorhanden → nichts tun"-Zweig. Der "kein Logo vorhanden
 → automatisch schreiben"-Zweig ist nur per Code-Review verifiziert, nicht
 auf einem frisch geflashten/gelöschten Gerät getestet.
+
+## `scripts/flash.sh`: Mac-/Linux-Unterstützung umgesetzt
+
+Neues `scripts/flash.sh` (Bash-Pendant zu `flash.ps1` für macOS - nur
+Apple Silicon/arm64 - und Linux, nur Flashen, kein `convert-logo`/
+`snmp-load`-Äquivalent) identisch aus dem Sensormeter-Repo übernommen -
+volle Begründung und Verifizierungsstand dort in `docs/entscheidungen.md`
+("`scripts/flash.sh`: Mac-/Linux-Unterstützung umgesetzt").

@@ -45,7 +45,8 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/ZABBIX.md](docs/ZABBIX.md) | Zabbix-Integration: OIDs, Template-Import, Host-Einrichtung, Trigger |
 | [docs/zabbix-template-sensormeter-wlan.yaml](docs/zabbix-template-sensormeter-wlan.yaml) | Fertiges Zabbix-Template |
 | [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display/PoE): Abhängigkeiten installieren, Repo holen, bauen, flashen |
-| [scripts/README.md](scripts/README.md) | Ausführliche Doku zu `flash.ps1` und `convert-logo.ps1` (Nutzung, Parameter, Beispiele) |
+| [scripts/flash.sh](scripts/flash.sh) | Bash-Pendant zu `flash.ps1` für macOS (nur Apple Silicon) und Linux, nur Flashen |
+| [scripts/README.md](scripts/README.md) | Ausführliche Doku zu `flash.ps1`/`flash.sh` und `convert-logo.ps1` (Nutzung, Parameter, Beispiele) |
 
 Dieses Projekt hat (im Unterschied zu den beiden Schwesterprojekten) keine
 vorgegebene Materialsammlung – Lastenheft, Pflichtenheft und BOM wurden
