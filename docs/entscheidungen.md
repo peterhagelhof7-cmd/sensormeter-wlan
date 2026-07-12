@@ -1118,3 +1118,54 @@ dokumentierte Einschränkung). Codepfad (welche Handler auf welche OID
 registriert werden) ist per Review zweifelsfrei korrekt; die tatsächliche
 SNMP-Antwort sollte bei Gelegenheit einmal vom lokalen Netz aus
 gegengeprüft werden (z. B. `scripts/snmp-load.ps1 -TargetIp <IP> -ShowValues -DurationSeconds 5`).
+
+## Partitionstabelle auf `min_spiffs.csv` umgestellt (Flash-Reserve deutlich vergrößert)
+
+Auf Anfrage: PlatformIOs implizites `default.csv`-Schema für `esp32dev`
+reserviert eine Datenpartition, die genauso groß ist wie eine der beiden
+OTA-App-Partitionen (~1,31 MB) - tatsächlich genutzt werden dort aber nur
+`config.xml`, `history.csv` und optional ein 1 KB Branding-Logo (ein paar
+KB insgesamt). Bei 87,4 % Flash-Auslastung (Stand vor diesem Fix, siehe
+weiter oben "SNMP-OID-Vereinheitlichung") war das der mit Abstand größte
+ungenutzte Block im gesamten Layout.
+
+**Umgestellt auf `min_spiffs.csv`** (`board_build.partitions` in
+`platformio.ini`) - eine Standard-Partitionstabelle, die mit dem
+`framework-arduinoespressif32`-Paket mitgeliefert wird, kein eigenes File
+nötig (anders als bei Sensormeter Display, das schon vorher eine
+handgeschriebene `partitions_ota.csv` hatte). Neue Aufteilung:
+`app0`/`app1` je `0x1E0000` (≈1,88 MB statt ≈1,31 MB), `spiffs` nur noch
+`0x20000` (128 KB statt ≈1,31 MB) - beide OTA-Slots bleiben erhalten,
+keine Funktionalität geht verloren. **Ergebnis: Flash-Auslastung von
+83,2 % auf 55,5 % gefallen** (1.090.793 von jetzt 1.966.080 statt vorher
+1.310.720 Byte) - RAM unverändert.
+
+**Wichtige Nebenwirkung, die beachtet werden musste:** Ein
+Partitionstabellen-Wechsel verschiebt die physische Lage der
+LittleFS-Partition (`0x290000` → `0x3D0000`) - vorhandene Daten dort
+(`config.xml`, `history.csv`, Branding-Logo) sind an der alten Adresse
+zwar noch physisch vorhanden, aber für die Firmware nach dem Wechsel
+unsichtbar (die neue Partition an der neuen Adresse ist leer/`0xFF`).
+Deshalb vor dem Flashen `config.xml` per Serial-`dump` gesichert, nach dem
+Flashen über `pio run --target uploadfs` (mit der gesicherten `config.xml`
+in einem temporären `firmware/data/`-Ordner, danach sofort wieder
+gelöscht - enthält Klartext-WLAN-Passwort) gezielt in die neue
+LittleFS-Partition zurückgeschrieben. `history.csv` ging dabei unvermeidbar
+verloren (kein Serial-Kommando zum Sichern, siehe frühere Diskussion) -
+füllt sich über die nächsten Stunden neu. Das Branding-Logo musste NICHT
+manuell zurückgespielt werden - die seit dieser Sitzung bestehende
+Auto-Provisionierung (`BrandingManager::provisionDefaultLogo()`) hat es
+beim ersten Boot mit der neuen, leeren Partition automatisch neu gesetzt.
+
+Bestätigt, dass ein normaler `pio run --target upload` bei geänderter
+Partitionstabelle tatsächlich Bootloader (`0x1000`), Partitionstabelle
+(`0x8000`) UND `otadata` (`0xe000`) mit schreibt, nicht nur die
+App-Partition - frühere Annahme (nur App wird geschrieben) beruhte auf
+abgeschnittener `tail`-Ausgabe in einem früheren Flash-Log dieser Sitzung,
+war also falsch. Wichtig zu wissen für künftige Partitionstabellen-
+Änderungen: ein einzelner `upload`-Durchlauf genügt, kein separater
+Bootloader-/Partitions-Flash-Schritt nötig.
+
+Auf dem angeschlossenen Gerät geflasht und vollständig verifiziert:
+`status`/`dump` zeigen normalen Betrieb und exakt die vorherige
+Konfiguration (WLAN verbunden, gleiche SSID/statische IP/Passwort).
