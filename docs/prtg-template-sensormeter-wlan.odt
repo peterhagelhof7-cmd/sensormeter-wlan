@@ -797,14 +797,14 @@
       </channeldata>
       <triggerdata/>
     </create>
-    <check id="snmp1.3.6.1.4.1.99999.2.1.0" meta="snmp" requires="snmp">
+    <check id="snmp1.3.6.1.4.1.99999.2.2.0" meta="snmp" requires="snmp">
       <metadata>
         <oid>
-          1.3.6.1.4.1.99999.2.1.0
+          1.3.6.1.4.1.99999.2.2.0
         </oid>
       </metadata>
     </check>
-    <create id="{F6462833-7E31-4FE0-9A42-A739B74BBF07}" kind="snmpcustomstring" requires="snmp1.3.6.1.4.1.99999.2.1.0" displayname="Netzwerk: WLAN-IP">
+    <create id="{F6462833-7E31-4FE0-9A42-A739B74BBF07}" kind="snmpcustomstring" requires="snmp1.3.6.1.4.1.99999.2.2.0" displayname="Netzwerk: WLAN-IP">
       <createdata>
         <tags>
           snmpcustomstringsensor
@@ -833,7 +833,7 @@
         <usesingleget/>
         <usebulkgetnext/>
         <oid>
-          1.3.6.1.4.1.99999.2.1.0
+          1.3.6.1.4.1.99999.2.2.0
         </oid>
         <includemust/>
         <includemustnot/>
@@ -1001,14 +1001,14 @@
       </channeldata>
       <triggerdata/>
     </create>
-    <check id="snmp1.3.6.1.4.1.99999.2.2.0" meta="snmp" requires="snmp">
+    <check id="snmp1.3.6.1.4.1.99999.2.3.0" meta="snmp" requires="snmp">
       <metadata>
         <oid>
-          1.3.6.1.4.1.99999.2.2.0
+          1.3.6.1.4.1.99999.2.3.0
         </oid>
       </metadata>
     </check>
-    <create id="{21151402-F4C0-4076-9329-08176868B081}" kind="snmpcustom" requires="snmp1.3.6.1.4.1.99999.2.2.0" displayname="Netzwerk: WLAN-Signalstaerke">
+    <create id="{21151402-F4C0-4076-9329-08176868B081}" kind="snmpcustom" requires="snmp1.3.6.1.4.1.99999.2.3.0" displayname="Netzwerk: WLAN-Signalstaerke">
       <createdata>
         <tags>
           snmpcustomsensor
@@ -1037,7 +1037,7 @@
         <usesingleget/>
         <usebulkgetnext/>
         <oid>
-          1.3.6.1.4.1.99999.2.2.0
+          1.3.6.1.4.1.99999.2.3.0
         </oid>
         <snmptype>
           abs

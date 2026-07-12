@@ -15,8 +15,14 @@ static const char* OID_SYSTEM_NAME = ".1.3.6.1.4.1.99999.1.1.0";
 static const char* OID_FIRMWARE = ".1.3.6.1.4.1.99999.1.2.0";
 static const char* OID_SYSTEM_TYPE = ".1.3.6.1.4.1.99999.1.3.0";
 
-static const char* OID_WLAN_IP = ".1.3.6.1.4.1.99999.2.1.0";
-static const char* OID_WLAN_RSSI = ".1.3.6.1.4.1.99999.2.2.0";
+// .2.1 (LAN-IP) bleibt bewusst frei/unbeantwortet - dieses Geraet hat kein
+// LAN-Interface. WLAN-IP/RSSI liegen bewusst auf .2.2/.2.3 statt .2.1/.2.2,
+// damit die Basis-OID-Struktur exakt zu Sensormeter/Sensormeter PoE passt
+// (dort .2.1=LAN-IP, .2.2=WLAN-IP, .2.3=WLAN-RSSI) - ein Sensormeter
+// Display kann dadurch alle drei Varianten mit identischen Offsets
+// abfragen, siehe docs/entscheidungen.md.
+static const char* OID_WLAN_IP = ".1.3.6.1.4.1.99999.2.2.0";
+static const char* OID_WLAN_RSSI = ".1.3.6.1.4.1.99999.2.3.0";
 
 static const char* OID_SENSOR1_NAME = ".1.3.6.1.4.1.99999.3.1.0";
 static const char* OID_SENSOR1_TEMP = ".1.3.6.1.4.1.99999.3.2.0";  // Grad C x10

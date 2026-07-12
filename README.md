@@ -163,10 +163,11 @@ keine eigene `partitions.csv` nötig (siehe `docs/entscheidungen.md`).
 
 ## Zusammenhang mit den Schwesterprojekten
 
-- SNMP-OID-Struktur bewusst identisch zur Basis des Sensormeter-Projekts
-  (`.1.3.6.1.4.1.99999.x`), nur ohne Sensor-2-Zweig — das
-  Sensormeter-Display-Projekt kann damit Geräte aus beiden Produktlinien
-  ohne Codeänderung abfragen.
+- SNMP-OID-Struktur bewusst identisch zur Basis von Sensormeter und
+  Sensormeter PoE (`.1.3.6.1.4.1.99999.x`), nur ohne LAN-IP- und
+  Sensor-2-Zweig (keine passende Hardware vorhanden) — das
+  Sensormeter-Display-Projekt kann damit Geräte aus allen drei
+  Produktlinien mit identischen OID-Offsets ohne Codeänderung abfragen.
 - Fallback-WLAN-Konvention `installer`/`installer` wie beim
   Sensormeter-Projekt übernommen — hier bereits als echter, selbst
   aufgespannter Access Point umgesetzt (DHCP, nur eigene IP + Subnetzmaske);

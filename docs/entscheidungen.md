@@ -1071,3 +1071,50 @@ Apple Silicon/arm64 - und Linux, nur Flashen, kein `convert-logo`/
 `snmp-load`-Äquivalent) identisch aus dem Sensormeter-Repo übernommen -
 volle Begründung und Verifizierungsstand dort in `docs/entscheidungen.md`
 ("`scripts/flash.sh`: Mac-/Linux-Unterstützung umgesetzt").
+
+## SNMP-OID-Vereinheitlichung: WLAN-IP/RSSI auf .2.2/.2.3 verschoben, .2.1 (LAN-IP) jetzt frei
+
+Widerruft die frühere, bewusst so getroffene Entscheidung unter "P6 —
+SNMP" oben ("`.1.3.6.1.4.1.99999.2` hat hier nur zwei statt drei
+Einträge ... abweichend von der Nummerierung im Sensormeter-Projekt").
+Die damalige Begründung (kein LAN-Interface, also kein LAN-IP-Eintrag
+nötig) war richtig - nur die gewählte Umsetzung (Nummern nach vorne
+rutschen lassen statt die Lücke zu lassen) hat unnötig eine zweite
+Divergenz zu Sensormeter/Sensormeter PoE erzeugt, obwohl das Sensor-2-
+Beispiel (`.4.x`) im selben Dokument bereits das bessere Muster zeigte:
+fehlende Hardware = unbeantworteter Zweig, nicht verschobene Nummern.
+
+**Neu:** `OID_WLAN_IP` von `.2.1.0` auf `.2.2.0`, `OID_WLAN_RSSI` von
+`.2.2.0` auf `.2.3.0` verschoben (`firmware/src/SNMPManager.cpp`). `.2.1.0`
+(LAN-IP) bleibt jetzt einfach unregistriert - exakt dasselbe Muster wie
+der schon bestehende `.4.x`-Sensor-2-Zweig. Damit ist die Basis-OID-
+Struktur über alle drei SNMP-Agent-Projekte (Sensormeter, Sensormeter
+WLAN, Sensormeter PoE) erstmals wirklich identisch, nicht nur "dieselbe
+Basis-Nummer mit eigenem Sub-Schema".
+
+Mitgezogen: `docs/PRTG.md`, `docs/ZABBIX.md`, `docs/admin-guide.html`
+(inkl. PDF neu gerendert), `docs/lastenheft.txt`,
+`docs/zabbix-template-sensormeter-wlan.yaml`,
+`docs/prtg-template-sensormeter-wlan.odt` (trotz Dateiendung reines XML,
+per `sed` bearbeitet), README.md. Zusätzlich `sensormeter-family/repo`
+(Feature-Vergleich, "Was die Familie verbindet", `scripts/snmp-load.ps1`
+Oid-Labels) und `sensormeter-poe/repo` nicht betroffen (dort war die
+Struktur bereits korrekt, keine Änderung nötig).
+
+**Breaking Change für bestehende Monitoring-Setups:** Wer bereits Zabbix/
+PRTG gegen das alte WLAN-Schema konfiguriert hat, bekommt nach diesem
+Update an `.2.1.0` keine Antwort mehr (vorher WLAN-IP) und an `.2.2.0`
+eine IP-Zeichenkette statt eines RSSI-Integers (vorher RSSI, jetzt
+WLAN-IP) - die aktualisierten Templates müssen dort neu importiert
+werden. Bewusst jetzt gemacht statt später, da noch wenige/keine echten
+Deployments mit dem alten Schema bekannt sind.
+
+Geflasht und auf dem angeschlossenen Gerät verifiziert: Build erfolgreich,
+Boot-Log unauffällig, Gerät verbindet sich normal ins WLAN. Die
+eigentliche SNMP-Antwort auf den neuen OIDs konnte NICHT live per
+`snmpget`/`snmp-load.ps1` verifiziert werden - diese Umgebung hat keinen
+Netzwerkzugriff auf das Geräte-Subnetz (siehe an anderer Stelle
+dokumentierte Einschränkung). Codepfad (welche Handler auf welche OID
+registriert werden) ist per Review zweifelsfrei korrekt; die tatsächliche
+SNMP-Antwort sollte bei Gelegenheit einmal vom lokalen Netz aus
+gegengeprüft werden (z. B. `scripts/snmp-load.ps1 -TargetIp <IP> -ShowValues -DurationSeconds 5`).

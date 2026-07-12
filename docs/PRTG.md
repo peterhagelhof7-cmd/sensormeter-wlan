@@ -7,21 +7,23 @@ oder einem Gateway. SNMP ist read-only: PRTG kann nichts am Gerät verändern.
 
 ## OIDs (Basis `.1.3.6.1.4.1.99999`)
 
-**Wichtig:** Sensormeter WLAN hat kein LAN-Interface und keinen zweiten
-Sensor – das OID-Schema weicht deshalb an zwei Stellen von den
-Schwesterprojekten Sensormeter (WT32-ETH01) und Sensormeter PoE ab
-(dort zusätzlich `.2.1.0`=LAN-IP und ein kompletter `.4.x`-Sensor-2-Zweig).
-Das mitgelieferte Template ist bereits auf dieses Schema abgestimmt – bei
-Sensormeter/Sensormeter PoE nicht wiederverwenden, dort liegt ein eigenes
-Template vor.
+**Wichtig:** Die Basis-OID-Struktur ist jetzt identisch zu den
+Schwesterprojekten Sensormeter (WT32-ETH01) und Sensormeter PoE - nur die
+Zweige, für die dieses Gerät keine Hardware hat, bleiben unbeantwortet:
+`.2.1.0` (LAN-IP, kein LAN-Interface vorhanden) und der komplette
+`.4.x`-Sensor-2-Zweig (kein zweiter Sensor möglich). Ein Sensormeter
+Display kann dadurch alle drei SNMP-Agent-Varianten mit denselben
+OID-Offsets abfragen. Das mitgelieferte Template ist bereits auf dieses
+Schema abgestimmt – bei Sensormeter/Sensormeter PoE nicht wiederverwenden,
+dort liegt ein eigenes Template vor.
 
 | OID | Bedeutung | Typ |
 |---|---|---|
 | `.1.99999.1.1.0` | Systemname | String |
 | `.1.99999.1.2.0` | Firmwareversion | String |
 | `.1.99999.1.3.0` | Systemtyp (fest "Sensormeter WLAN") | String |
-| `.1.99999.2.1.0` | WLAN-IP | String |
-| `.1.99999.2.2.0` | WLAN-Signalstärke | Integer, dBm |
+| `.1.99999.2.2.0` | WLAN-IP | String |
+| `.1.99999.2.3.0` | WLAN-Signalstärke | Integer, dBm |
 | `.1.99999.3.1.0` | Sensor Name (fest "DHT22") | String |
 | `.1.99999.3.2.0` | Temperatur | Integer, ×10 (235 = 23.5 °C) |
 | `.1.99999.3.3.0` | Luftfeuchte | Integer, ×10 |
