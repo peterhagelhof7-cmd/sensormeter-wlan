@@ -125,6 +125,11 @@ void NetworkManager::begin() {
   // kurzen WLAN-Aussetzer selbsttaetig wieder aufgebaut wird (zusaetzlich zum
   // aktiven Reconnect in loop()).
   WiFi.setAutoReconnect(true);
+  // WLAN-Powersave (Modem-Sleep) abschalten - der ESP32-Default vertraegt sich
+  // mit manchen APs schlecht und fuehrt zu haeufigen kurzen Verbindungsabbruechen
+  // (auf Hardware beobachtet: ~alle 20s ein Drop). Ohne Sleep bleibt die
+  // Verbindung deutlich stabiler, Kosten: minimal hoehere Stromaufnahme.
+  WiFi.setSleep(false);
   WiFi.setHostname(sanitizeHostname(_config.getConfig().systemName).c_str());
 
   DeviceConfig cfg = _config.getConfig();
