@@ -11,6 +11,11 @@ static const unsigned long WLAN_CHECK_TIMEOUT_MS = 5UL * 60UL * 1000UL;
 // schnelles Feedback statt 5 Minuten Wartezeit, siehe begin().
 static const unsigned long WLAN_TEST_TIMEOUT_MS = 30UL * 1000UL;
 static const unsigned long FALLBACK_RETRY_INTERVAL_MS = 30UL * 1000UL;
+// Aktiver WLAN-Reconnect-Versuch alle 20s, solange im WLAN_CHECK noch kein
+// GOT_IP kam - die Firmware wartet damit nicht mehr passiv auf den ESP32-
+// Core-Auto-Reconnect, sondern stoesst selbst regelmaessig einen erneuten
+// Verbindungsversuch an (siehe loop()).
+static const unsigned long RECONNECT_RETRY_INTERVAL_MS = 20UL * 1000UL;
 static const char* FALLBACK_WLAN_SSID = "installer";
 static const char* FALLBACK_WLAN_PSK = "installer";
 
@@ -116,6 +121,10 @@ void NetworkManager::begin() {
 
   WiFi.onEvent(onNetworkEvent);
   WiFi.mode(WIFI_MODE_STA);
+  // Core-seitigen Auto-Reconnect aktivieren, damit die Verbindung nach einem
+  // kurzen WLAN-Aussetzer selbsttaetig wieder aufgebaut wird (zusaetzlich zum
+  // aktiven Reconnect in loop()).
+  WiFi.setAutoReconnect(true);
   WiFi.setHostname(sanitizeHostname(_config.getConfig().systemName).c_str());
 
   DeviceConfig cfg = _config.getConfig();
@@ -144,6 +153,7 @@ void NetworkManager::begin() {
 
   _data.setSystemState(SystemState::WLAN_CHECK);
   _networkCheckStartedMillis = millis();
+  _lastReconnectAttemptMillis = millis();
 }
 
 void NetworkManager::loop() {
@@ -157,6 +167,14 @@ void NetworkManager::loop() {
       startFallbackAp();
       _lastFallbackJoinAttemptMillis = millis();
       _data.setSystemState(SystemState::FALLBACK_MODE);
+    } else if (_config.getConfig().wlanSsid.length() > 0 &&
+               millis() - _lastReconnectAttemptMillis > RECONNECT_RETRY_INTERVAL_MS) {
+      // Aktiv erneut verbinden, statt nur auf den Core-Auto-Reconnect zu warten -
+      // sonst bleibt das Geraet nach einem WLAN-Aussetzer bis zum 5-min-Timeout
+      // auf 0.0.0.0 haengen und kippt dann unnoetig in den Fallback-AP.
+      Serial.println("[NET] WLAN weg - aktiver Reconnect-Versuch");
+      WiFi.reconnect();
+      _lastReconnectAttemptMillis = millis();
     }
   } else if (state == SystemState::FALLBACK_MODE) {
     if (networkOk()) {
@@ -173,6 +191,7 @@ void NetworkManager::loop() {
     _wlanCheckTimeoutMs = WLAN_CHECK_TIMEOUT_MS;
     _data.setSystemState(SystemState::WLAN_CHECK);
     _networkCheckStartedMillis = millis();
+    _lastReconnectAttemptMillis = millis();
   }
 }
 
