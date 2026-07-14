@@ -1,5 +1,8 @@
 zabbix_export:
   version: '6.4'
+  template_groups:
+    - uuid: 5974b75883344656b36c0057518af8fd
+      name: 'IoT Sensoren'
   templates:
     - uuid: 5c63e8c95ee04f15a343b370d4fa4f96
       template: 'Sensormeter WLAN'
@@ -158,20 +161,20 @@ zabbix_export:
           tags:
             - tag: component
               value: status
-      triggers:
-        - uuid: 7d5d64a9a1e54ddf9b2654d408212f5d
-          name: 'Temperatur zu hoch auf {HOST.NAME}'
-          expression: 'last(/Sensormeter WLAN/sensor.temperature)>{$TEMP_MAX_C}'
-          priority: WARNING
-        - uuid: 5f92381e21d94d1bb08cbd3b65bc1bbd
-          name: 'Luftfeuchtigkeit zu hoch auf {HOST.NAME}'
-          expression: 'last(/Sensormeter WLAN/sensor.humidity)>{$HUMIDITY_MAX_PERCENT}'
-          priority: WARNING
-        - uuid: 30a463c997bb4336a1e05fd9d7ac4cf9
-          name: 'Keine SNMP-Daten von {HOST.NAME} seit 10 Minuten'
-          expression: 'nodata(/Sensormeter WLAN/sensor.temperature,10m)=1'
-          priority: HIGH
-        - uuid: ae41359c5be7403baba1537b088995ad
-          name: 'Freier Heap niedrig auf {HOST.NAME}'
-          expression: 'last(/Sensormeter WLAN/status.freeheap)<{$HEAP_MIN_BYTES}'
-          priority: WARNING
+  triggers:
+    - uuid: 7d5d64a9a1e54ddf9b2654d408212f5d
+      name: 'Temperatur zu hoch auf {HOST.NAME}'
+      expression: 'last(/Sensormeter WLAN/sensor.temperature)>{$TEMP_MAX_C}'
+      priority: WARNING
+    - uuid: 5f92381e21d94d1bb08cbd3b65bc1bbd
+      name: 'Luftfeuchtigkeit zu hoch auf {HOST.NAME}'
+      expression: 'last(/Sensormeter WLAN/sensor.humidity)>{$HUMIDITY_MAX_PERCENT}'
+      priority: WARNING
+    - uuid: 30a463c997bb4336a1e05fd9d7ac4cf9
+      name: 'Keine SNMP-Daten von {HOST.NAME} seit 10 Minuten'
+      expression: 'nodata(/Sensormeter WLAN/sensor.temperature,10m)=1'
+      priority: HIGH
+    - uuid: ae41359c5be7403baba1537b088995ad
+      name: 'Freier Heap niedrig auf {HOST.NAME}'
+      expression: 'last(/Sensormeter WLAN/status.freeheap)<{$HEAP_MIN_BYTES}'
+      priority: WARNING
