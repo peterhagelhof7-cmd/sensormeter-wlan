@@ -1204,3 +1204,48 @@ Hardware.
 **Standing-Vorgabe**: dieser Mechanismus ist ab jetzt fester Bestandteil
 dieses Projekts und laeuft bei kuenftigen Firmware-Versionen automatisch
 mit (siehe Sensormeter-Eintrag).
+
+## 2026-07-16 — Persistenter Log-Puffer auf LittleFS (/log.txt) + WARNING-Stufe
+
+Der bisherige Log-Ringpuffer (`DataManager::_log`, `LOG_CAPACITY = 5`) hielt
+nur die letzten 5 Meldungen im RAM - ueberlebte weder einen Neustart noch
+half er bei der Diagnose laenger zurueckliegender Ereignisse (z.B. wie oft
+das WLAN in der letzten Woche geflappt hat). Ergaenzt um eine dauerhafte
+Logdatei, unabhaengig vom weiterhin bestehenden RAM-Puffer (der bleibt fuer
+die "letzte 5 Meldungen"-Webseite und den SyslogManager-Versand zustaendig).
+
+- Neue benannte Severity-Stufen `DataManager::SEVERITY_ERROR` (3),
+  `SEVERITY_WARNING` (4, neu), `SEVERITY_INFO` (6) statt roher Zahlen an
+  den Aufrufstellen.
+- `pushLogEntry()` haengt jeden Eintrag zusaetzlich formatiert an `/log.txt`
+  an (`appendLogFile()`); bei Ueberschreiten von 32 KB wird die Datei nach
+  `/log.old.txt` rotiert (bestehende `log.old.txt` wird dabei ueberschrieben).
+  Bei ~80-100 Byte/Zeile sind das ca. 350-400 Eintraege je Datei
+  (700-800 gesamt) - reicht auch bei starkem WLAN-Flapping fuer mehrere
+  Tage Verlauf. Die LittleFS-Partition (`min_spiffs.csv`) hat ~128 KB,
+  `config.xml`/`history.csv`/Logo belegen zusammen nur wenige KB, das laesst
+  >60 KB Reserve fuer beide Logdateien zusammen (max. 64 KB).
+  Rotation ohne Tmp-Datei-Umweg (anders als `ConfigManager::save()`) - ein
+  Verlust der letzten paar Zeilen bei einem Stromausfall waehrend der
+  Rotation ist unkritisch (reine Diagnosedaten, kein Konfigurationszustand).
+- `NetworkManager` unterscheidet jetzt: ein einzelner WLAN-Aussetzer ist
+  `WARNING` (selbstheilend durch aktiven Reconnect, kein Admin-relevanter
+  Fehler), mit einem neuen "wieder verbunden (Ausfall Xs)"-Eintrag bei
+  Wiederherstellung - vorher gab es dafuer gar keinen Log-Eintrag, nur der
+  Fallback-AP-Start blieb `ERROR`.
+- Web-UI: `/log.txt` und `/log.old.txt` werden direkt aus LittleFS gestreamt
+  (`text/plain`, im Browser lesbar UND per Strg+S speicherbar, kein
+  gesonderter Download-Header wie bei `/values.csv`), neue Buttons "Log"
+  und (falls vorhanden) "Log (alt)" auf der Hauptseite.
+
+Getestet: `pio run` - baut sauber. **Hinweis zur Commit-Historie**: dieser
+Code lag bereits vor der OTA-Upload-Aenderung (Eintrag oben) im
+Arbeitsverzeichnis, wurde aber erst nachtraeglich in zwei Commits
+zerlegt - der erste OTA-Commit enthielt versehentlich schon die
+`WebServerManager.cpp`-Haelfte dieser Aenderung (Routen/UI), die
+`DataManager`/`NetworkManager`/`WebServerManager.h`-Haelfte kam separat
+danach. Beide Commits zusammen ergeben den vollstaendigen, konsistenten
+Stand; der erste Commit fuer sich allein waere nicht eigenstaendig baubar
+gewesen. Nicht getestet: echtes Verhalten auf echter Hardware ueber
+mehrere Tage (Rotation bei 32 KB nur gegen die Groessenrechnung geprueft,
+nicht gegen eine tatsaechlich vollgeschriebene Datei).
