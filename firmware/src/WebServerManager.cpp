@@ -245,6 +245,10 @@ String WebServerManager::buildMainPageBody() const {
   html += "<div class=\"block\"><h2>Letzte Meldungen</h2><table id=\"logtable\"><tr><th>Zeit</th><th>Meldung</th></tr></table></div>";
 
   html += "<div class=\"block\"><a href=\"/values.csv\"><button>values.csv</button></a>";
+  html += "<a href=\"/log.txt\"><button>Log</button></a>";
+  if (LittleFS.exists("/log.old.txt")) {
+    html += "<a href=\"/log.old.txt\"><button>Log (alt)</button></a>";
+  }
   html += "<a href=\"/settings\"><button>Einstellungen</button></a></div>";
 
   html += "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script><script>";
@@ -378,8 +382,11 @@ String WebServerManager::buildSettingsPageBody() const {
 
   html += "<div class=\"block\"><h2>Firmware</h2>";
   html += "<form method=\"POST\" action=\"/api/ota/upload\" enctype=\"multipart/form-data\">";
+  html += "<label><input type=\"checkbox\" name=\"otaForceDowngrade\"> Downgrade erzwingen (aeltere Version zulassen)</label>";
   html += "<input type=\"file\" name=\"file\" accept=\".bin\"><input type=\"submit\" value=\".bin hochladen\">";
   html += "</form>";
+  html += "<p class=\"hint\">Die .bin muss zu diesem Projekt gehoeren (Herkunfts-/Versionspruefung, siehe "
+          "docs/entscheidungen.md) - falsche oder aeltere Firmware wird sonst abgelehnt.</p>";
   html += "<a href=\"https://github.com/" GITHUB_REPO_SLUG "/releases\" target=\"_blank\"><button type=\"button\">Releases auf GitHub</button></a>";
   html += "</div>";
 
@@ -462,6 +469,17 @@ void WebServerManager::handleValuesCsv(AsyncWebServerRequest* request) {
   AsyncWebServerResponse* response = request->beginResponse(200, "text/csv", csv);
   response->addHeader("Content-Disposition", "attachment; filename=values.csv");
   request->send(response);
+}
+
+void WebServerManager::handleLogFile(AsyncWebServerRequest* request, const char* path) {
+  if (!LittleFS.exists(path)) {
+    request->send(404, "text/plain", "Keine Logdatei vorhanden.");
+    return;
+  }
+  // text/plain statt "attachment"-Header, bewusst wie /values.csv: im
+  // Browser direkt anzeigbar UND per Strg+S/Rechtsklick herunterladbar -
+  // kein separater "View"- und "Download"-Weg noetig.
+  request->send(LittleFS, path, "text/plain");
 }
 
 // ----------------------------------------------------------------------------
@@ -913,6 +931,8 @@ void WebServerManager::begin() {
   _server.on("/", HTTP_GET, [this](AsyncWebServerRequest* r) { handleRoot(r); });
   _server.on("/settings", HTTP_GET, [this](AsyncWebServerRequest* r) { handleSettingsPage(r); });
   _server.on("/values.csv", HTTP_GET, [this](AsyncWebServerRequest* r) { handleValuesCsv(r); });
+  _server.on("/log.txt", HTTP_GET, [this](AsyncWebServerRequest* r) { handleLogFile(r, "/log.txt"); });
+  _server.on("/log.old.txt", HTTP_GET, [this](AsyncWebServerRequest* r) { handleLogFile(r, "/log.old.txt"); });
 
   _server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest* r) { handleApiStatus(r); });
   _server.on("/api/sensors", HTTP_GET, [this](AsyncWebServerRequest* r) { handleApiSensors(r); });
@@ -948,6 +968,20 @@ void WebServerManager::begin() {
           _data.pushLogEntry("OTA (lokaler Upload) erfolgreich, Neustart");
           delay(500);
           ESP.restart();
+        } else if (!_otaInProgress) {
+          _data.pushLogEntry("OTA (lokaler Upload) fehlgeschlagen (Schreibfehler)", 3);
+          r->send(500, "text/plain", "Update fehlgeschlagen (Schreibfehler)");
+        } else if (!_ota.markerFound()) {
+          _data.pushLogEntry("OTA abgelehnt: kein Firmware-Erkennungsmerkmal gefunden", 3);
+          r->send(400, "text/plain", "Update abgelehnt: die Datei enthaelt kein gueltiges Firmware-Erkennungsmerkmal.");
+        } else if (!_ota.identityMatches()) {
+          _data.pushLogEntry("OTA abgelehnt: .bin gehoert zu einem anderen Projekt", 3);
+          r->send(400, "text/plain", "Update abgelehnt: die hochgeladene Firmware stammt von einem anderen Projekt.");
+        } else if (!_ota.versionAllowed()) {
+          _data.pushLogEntry("OTA abgelehnt: aeltere Firmware-Version", 3);
+          r->send(400, "text/plain",
+                  "Update abgelehnt: die hochgeladene Version ist aelter als die laufende "
+                  "(Downgrade nicht aktiviert).");
         } else {
           _data.pushLogEntry("OTA (lokaler Upload) fehlgeschlagen", 3);
           r->send(500, "text/plain", "Update fehlgeschlagen");
@@ -956,6 +990,12 @@ void WebServerManager::begin() {
       [this](AsyncWebServerRequest* r, String filename, size_t index, uint8_t* data, size_t len, bool final) {
         if (!checkAuth(r)) return;
         if (index == 0) {
+          // Checkbox steht im Formular VOR dem Datei-Feld, damit sie hier
+          // schon geparst ist - ESPAsyncWebServer parst Multipart-Felder in
+          // Reihenfolge des Request-Bodys, ein Feld nach dem Datei-Input
+          // waere an dieser Stelle (erster Chunk der Datei) noch nicht
+          // verfuegbar.
+          _ota.setAllowDowngrade(r->hasParam("otaForceDowngrade", true));
           _otaInProgress = _ota.beginLocalUpdate(UPDATE_SIZE_UNKNOWN);
           _otaSuccess = false;
         }

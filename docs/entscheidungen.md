@@ -1169,3 +1169,38 @@ Bootloader-/Partitions-Flash-Schritt nötig.
 Auf dem angeschlossenen Gerät geflasht und vollständig verifiziert:
 `status`/`dump` zeigen normalen Betrieb und exakt die vorherige
 Konfiguration (WLAN verbunden, gleiche SSID/statische IP/Passwort).
+
+## 2026-07-16 — OTA-Upload: Projekt-/Versionspruefung gegen Verwechslungen
+
+Direkter Anlass: die Frage, wie sichergestellt wird, dass niemand
+versehentlich die Firmware eines Schwesterprojekts (z.B. Sensormeter
+Display) auf dieses Geraet hochlaedt - `/api/ota/upload` pruefte bisher
+nur Basic-Auth, nicht den Inhalt der `.bin`. Identischer Mechanismus in
+allen vier Projekten der Familie umgesetzt, siehe Sensormeter-Eintrag vom
+selben Tag fuer die vollstaendige Begruendung:
+
+- Neues Feld `FIRMWARE_PROJECT_ID` (`"SENSORMETER-WLAN"`) neben
+  `DEVICE_FIRMWARE_VERSION` in `include/config.h(.example)`. Beide
+  zusammen ergeben den in `main.cpp` einkompilierten Marker
+  `"SM-FW-ID:SENSORMETER-WLAN:0.9.0-rc4:SM-FW-END"`.
+- `OtaManager` sucht diesen Marker chunk-uebergreifend im Byte-Stream
+  eines Uploads, vergleicht Projekt-ID (exakt) und Version (Semver,
+  `a.b.c[-rcN]`-Schema) gegen die eigenen Werte - `endLocalUpdate()`
+  committet nur bei Uebereinstimmung, sonst `Update.abort()`.
+- Neue Checkbox "Downgrade erzwingen" im Firmware-Formular (bewusst VOR
+  dem Datei-Feld wegen ESPAsyncWebServers Multipart-Parse-Reihenfolge),
+  erlaubt einen bewussten Ruecksprung auf eine aeltere Version.
+- Vier unterscheidbare Fehlermeldungen statt einem generischen "Update
+  fehlgeschlagen" (Schreibfehler / kein Marker / falsches Projekt / zu
+  alte Version).
+- Kein kryptografischer Schutz, nur Verwechslungs-Pruefung - siehe
+  Sensormeter-Eintrag.
+
+Getestet: `pio run` - baut sauber (Flash 55,9%/RAM 17,5%). Marker per
+Byte-Suche in `firmware.bin` verifiziert (`SM-FW-ID:SENSORMETER-WLAN:
+0.9.0-rc4:SM-FW-END`). Nicht getestet: echter OTA-Upload auf echter
+Hardware.
+
+**Standing-Vorgabe**: dieser Mechanismus ist ab jetzt fester Bestandteil
+dieses Projekts und laeuft bei kuenftigen Firmware-Versionen automatisch
+mit (siehe Sensormeter-Eintrag).
