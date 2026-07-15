@@ -167,8 +167,17 @@ void NetworkManager::loop() {
   if (state == SystemState::WLAN_CHECK) {
     if (networkOk()) {
       _data.setSystemState(SystemState::RUN_NORMAL);
+      // Nur loggen, wenn dies auf einen getrackten Ausfall folgt (nicht beim
+      // allerersten Verbindungsaufbau nach dem Boot, siehe _wlanDownSinceMillis).
+      if (_wlanDownSinceMillis != 0) {
+        unsigned long downSec = (millis() - _wlanDownSinceMillis) / 1000UL;
+        _data.pushLogEntry("Netzwerk: WLAN wieder verbunden (Ausfall " + String(downSec) + "s)",
+                            DataManager::SEVERITY_INFO);
+        _wlanDownSinceMillis = 0;
+      }
     } else if (millis() - _networkCheckStartedMillis > _wlanCheckTimeoutMs) {
-      _data.pushLogEntry("Netzwerk: kein WLAN, starte eigenen Access-Point \"installer\"", 3);
+      _data.pushLogEntry("Netzwerk: kein WLAN, starte eigenen Access-Point \"installer\"",
+                          DataManager::SEVERITY_ERROR);
       startFallbackAp();
       _lastFallbackJoinAttemptMillis = millis();
       _data.setSystemState(SystemState::FALLBACK_MODE);
@@ -191,9 +200,14 @@ void NetworkManager::loop() {
       _lastFallbackJoinAttemptMillis = millis();
     }
   } else if (state == SystemState::RUN_NORMAL && !networkOk()) {
-    _data.pushLogEntry("Netzwerk: WLAN-Verbindung verloren", 3);
+    // WARNING statt ERROR: ein einzelner Aussetzer ist ein erwartetes,
+    // selbstheilendes Ereignis (aktiver Reconnect siehe oben) - kein Fehler,
+    // der Admin-Aufmerksamkeit braucht. Die "wieder verbunden"-Gegenseite
+    // steht oben im WLAN_CHECK-Zweig.
+    _data.pushLogEntry("Netzwerk: WLAN-Verbindung verloren", DataManager::SEVERITY_WARNING);
     _apActive = false;
     _wlanCheckTimeoutMs = WLAN_CHECK_TIMEOUT_MS;
+    _wlanDownSinceMillis = millis();
     _data.setSystemState(SystemState::WLAN_CHECK);
     _networkCheckStartedMillis = millis();
     _lastReconnectAttemptMillis = millis();

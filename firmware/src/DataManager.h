@@ -34,8 +34,26 @@ struct LogEntry {
 
 class DataManager {
  public:
+  // Benannte Severity-Stufen (RFC5424-artige Skala, wie bereits in
+  // SyslogManager verwendet) statt roher Zahlen an den Aufrufstellen.
+  // WARNING (4) ist neu: fuer transiente, selbstheilende Ereignisse (z.B.
+  // ein kurzer WLAN-Aussetzer, der sich von selbst erholt) - getrennt von
+  // ERROR (3), das weiterhin echten, admin-relevanten Fehlern vorbehalten
+  // bleibt.
+  static const int SEVERITY_ERROR = 3;
+  static const int SEVERITY_WARNING = 4;
+  static const int SEVERITY_INFO = 6;
+
   static const size_t RINGBUFFER_SIZE = 168;  // 7 Tage * 24 Stunden
   static const size_t LOG_CAPACITY = 5;       // Lastenheft 5.3: "letzte 5 Meldungen"
+  // Persistenter Log-Puffer auf LittleFS (/log.txt, bei Ueberschreiten
+  // umbenannt nach /log.old.txt - siehe appendLogFile()): 32 KB je Datei,
+  // max. 64 KB gesamt. Die LittleFS-Datenpartition (min_spiffs.csv) hat nur
+  // ~128 KB insgesamt; config.xml/history.csv/Logo belegen zusammen nur
+  // wenige KB, das laesst >60 KB Reserve. Bei ~80-100 Byte je Zeile sind das
+  // ca. 350-400 Eintraege je Datei (700-800 gesamt) - reicht auch bei
+  // starkem WLAN-Flapping fuer mehrere Tage Verlauf.
+  static const size_t LOG_FILE_MAX_BYTES = 32UL * 1024UL;
 
   void begin();
 
@@ -57,12 +75,18 @@ class DataManager {
   // werden - main.cpp ruft dataManager.begin() bewusst frueher auf.
   void loadRingbuffer();
 
-  void pushLogEntry(const String& message, int severity = 6);
+  void pushLogEntry(const String& message, int severity = SEVERITY_INFO);
   size_t getLogEntries(LogEntry* out, size_t maxCount);  // neueste zuerst
   size_t getLogEntriesAfter(unsigned long afterSequence, LogEntry* out, size_t maxCount);
 
  private:
   void saveRingbuffer();
+  // Haengt einen formatierten Eintrag an /log.txt an (Rotation nach
+  // /log.old.txt bei Ueberschreiten von LOG_FILE_MAX_BYTES) - siehe
+  // DataManager.cpp fuer das Zeilenformat. Unabhaengig vom RAM-Ringpuffer
+  // oben (_log/LOG_CAPACITY), der weiterhin nur fuer die "letzte 5
+  // Meldungen"-Webseite und den SyslogManager-Versand dient.
+  void appendLogFile(time_t timestamp, int severity, const String& message);
 
   SemaphoreHandle_t _mutex = nullptr;
 
