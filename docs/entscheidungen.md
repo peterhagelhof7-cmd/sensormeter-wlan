@@ -1334,3 +1334,15 @@ Task-Watchdog-Familienmitglieder konsistent.
 
 `pio run` erfolgreich (Flash 55,9%/RAM 17,5%, unveraendert). Noch nicht
 geflasht - kein Board in diesem Moment der Sitzung angeschlossen.
+
+## 2026-07-18, spaeter am selben Tag — CSS-Layoutfehler: Werksreset-Dropdown bricht aus der Karte aus
+
+Identischer Fund/Fix wie bei sensormeter (siehe dortiges
+`docs/entscheidungen.md`, dort per Vorher/Nachher-Screenshot live
+verifiziert): `<select id="resetScope">` hatte keine
+CSS-Breitenbegrenzung, rendert deshalb so breit wie seine laengste
+`<option>` und laeuft ueber den Kartenrand hinaus. Neue Regel
+`select{...max-width:100%;...}` ergaenzt - kurze Selects bleiben
+kompakt, nur lange Options-Texte werden gedeckelt. `pio run` erfolgreich
+(Flash/RAM unveraendert). Noch nicht geflasht/live verifiziert - kein
+Board in diesem Moment der Sitzung angeschlossen.
