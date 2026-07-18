@@ -85,6 +85,12 @@ Anbindung ist geflasht und bootet sauber (deaktiviert per Default), aber
 noch nicht gegen einen echten Broker/Home-Assistant-Instanz
 durchgetestet — siehe `docs/entscheidungen.md`.
 
+**Qualitätskontrolle läuft**: zuletzt (2026-07-18) einen bei Sensormeter
+gefundenen Chunkgrößen-Bug im OTA-Marker-Scan übernommen und behoben
+(gebaut und geflasht) sowie den `loopTask`-Stack vorsorglich auf 16KB
+verdoppelt (gebaut, noch nicht geflasht) — siehe
+`docs/entscheidungen.md`.
+
 Am schnellsten per PowerShell-Skript einrichten (installiert Python/Git/
 PlatformIO bei Bedarf automatisch, klont/aktualisiert das Repo, baut und
 flasht):
