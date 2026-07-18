@@ -54,6 +54,17 @@
 // ihn nicht wegoptimiert.
 const char kFirmwareIdentityMarker[] = "SM-FW-ID:" FIRMWARE_PROJECT_ID ":" DEVICE_FIRMWARE_VERSION ":SM-FW-END";
 
+// Arduino-ESP32-Standardstack fuer loopTask ist 8192 Byte (siehe
+// framework-arduinoespressif32/cores/esp32/main.cpp). Vorsorglich auf
+// 16 KB verdoppelt, identisch zu sensormeter und sensormeter-poe (beide
+// real mit "Stack canary watchpoint triggered (loopTask)" abgestuerzt) -
+// dieses Projekt hat zwar weniger gleichzeitig in loop() laufende
+// Manager (kein RelayManager/ContactManager/SensorDetector/zweites
+// Display) und ist bislang nie so abgestuerzt, aber die Absicherung
+// kostet praktisch nichts und macht alle drei Familienmitglieder mit
+// Task-Watchdog konsistent. Siehe docs/entscheidungen.md.
+SET_LOOP_TASK_STACK_SIZE(16384);
+
 DataManager dataManager;
 ConfigManager configManager;
 StorageManager storageManager;

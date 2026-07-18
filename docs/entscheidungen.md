@@ -1315,3 +1315,22 @@ den echten Tail-Grenzfall gebraucht. `pio run` erfolgreich (Flash
 55,9%/RAM 17,5%, praktisch unveraendert). Noch nicht auf echter Hardware
 geflasht/per echtem OTA-Upload getestet - Board wird in dieser Sitzung
 angeschlossen.
+
+## 2026-07-18, spaeter am selben Tag — loopTask-Stack vorsorglich auf 16KB verdoppelt
+
+Familienweiter Feature-Abgleich (sensormeter/sensormeter-poe/
+sensormeter-wlan/sensormeter-display) zeigte: `SET_LOOP_TASK_STACK_SIZE`
+fehlte hier, obwohl sensormeter und sensormeter-poe beide real mit
+"Stack canary watchpoint triggered (loopTask)" abgestuerzt sind (siehe
+jeweiliges docs/entscheidungen.md) und danach auf 16KB verdoppelt haben.
+Dieses Projekt ist bislang nie so abgestuerzt - hat auch spuerbar
+weniger gleichzeitig in `loop()` laufende Manager (kein
+RelayManager/ContactManager/SensorDetector/zweites Display) - aber ohne
+gezielten Stresstest ist "bisher nicht abgestuerzt" kein Beweis fuer
+"kann nicht abstuerzen". Auf Nutzerwunsch vorsorglich ergaenzt: billige
+Absicherung (kostet zur Laufzeit Heap fuer den Task-Stack, keine
+zusaetzliche statische RAM-Nutzung im Linker-Report), macht alle drei
+Task-Watchdog-Familienmitglieder konsistent.
+
+`pio run` erfolgreich (Flash 55,9%/RAM 17,5%, unveraendert). Noch nicht
+geflasht - kein Board in diesem Moment der Sitzung angeschlossen.
