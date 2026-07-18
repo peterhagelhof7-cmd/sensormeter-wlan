@@ -46,6 +46,7 @@ nutzt weiterhin Sensormeter bzw. Sensormeter PRO.
 | [docs/prtg-template-sensormeter-wlan.odt](docs/prtg-template-sensormeter-wlan.odt) | Fertiges PRTG-Geräte-Template für Auto-Discovery |
 | [docs/ZABBIX.md](docs/ZABBIX.md) | Zabbix-Integration: OIDs, Template-Import, Host-Einrichtung, Trigger |
 | [docs/zabbix-template-sensormeter-wlan.yaml](docs/zabbix-template-sensormeter-wlan.yaml) | Fertiges Zabbix-Template |
+| [docs/sensormeter-wlan.mib](docs/sensormeter-wlan.mib) | Tool-unabhängige SNMPv2-SMI-MIB (10 OIDs) für SNMP-Tools jenseits von Zabbix, z. B. Checkmk, PRTG generic SNMP, snmpwalk/snmptranslate |
 | [scripts/flash.ps1](scripts/flash.ps1) | PowerShell-Skript (fragt zuerst nach Projekt: Sensormeter/WLAN/Display/PoE): Abhängigkeiten installieren, Repo holen, bauen, flashen |
 | [scripts/flash.sh](scripts/flash.sh) | Bash-Pendant zu `flash.ps1` für macOS (nur Apple Silicon) und Linux, nur Flashen |
 | [scripts/README.md](scripts/README.md) | Ausführliche Doku zu `flash.ps1`/`flash.sh` und `convert-logo.ps1` (Nutzung, Parameter, Beispiele) |
