@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Sensormeter WLAN — One-Pager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1c2430;
+    background: #ffffff;
+    font-size: 9.6px;
+    line-height: 1.24;
+  }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0 0 3mm 0; }
+
+  header {
+    background: #0f1f3d;
+    color: #ffffff;
+    padding: 6mm 12mm 4mm 12mm;
+  }
+  .eyebrow {
+    font-size: 8.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9fb3d9;
+    margin-bottom: 2.5mm;
+  }
+  h1 {
+    margin: 0 0 1.5mm 0;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+  }
+  .subtitle { color: #cdd8ec; font-size: 10.5px; margin-bottom: 3mm; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+  }
+  .badge-orange { background: #c8622a; color: #fff; }
+  .badge-navy { background: #24365c; color: #cdd8ec; }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8mm;
+    padding: 5mm 12mm 0 12mm;
+  }
+  h2 {
+    font-size: 8.6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #c8622a;
+    border-bottom: 1px solid #e4e1d8;
+    padding-bottom: 1mm;
+    margin: 0 0 1.6mm 0;
+  }
+  section + section { margin-top: 2.4mm; }
+  p { margin: 0 0 1.4mm 0; }
+  ul { margin: 0; padding-left: 3.8mm; }
+  li { margin-bottom: 0.7mm; }
+
+  .modgroup { margin-bottom: 1.8mm; }
+  .modgroup-label {
+    font-size: 7.8px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8a93a3;
+    margin-bottom: 0.9mm;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 2.5px; }
+  .pill {
+    background: #f2f0e9;
+    border: 1px solid #e4e1d8;
+    border-radius: 3px;
+    padding: 1.4px 5px;
+    font-size: 8.6px;
+    color: #33261b;
+  }
+  .pill-new { background: #eaf3ef; border-color: #b9d9cc; color: #1f5c46; font-weight: 600; }
+
+  .flow-box {
+    border: 1px solid #e4e1d8;
+    border-left: 3px solid #c8622a;
+    border-radius: 3px;
+    padding: 1.8mm 3mm;
+    margin-bottom: 1.4mm;
+    background: #fbfaf7;
+  }
+  .flow-title { font-weight: 700; font-size: 9.6px; }
+  .flow-sub { color: #6b7280; font-size: 8.6px; }
+  .flow-arrow { text-align: center; color: #b0b6c0; font-size: 10px; margin: 0.4mm 0; }
+
+  table.kpi { width: 100%; border-collapse: collapse; }
+  table.kpi td { padding: 1.1mm 0; border-bottom: 1px solid #eeece5; font-size: 9.6px; }
+  table.kpi td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  footer {
+    margin: 3mm 12mm 0 12mm;
+    padding-top: 2mm;
+    border-top: 1px solid #e4e1d8;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 8.6px;
+    color: #6b7280;
+  }
+  footer a { color: #c8622a; text-decoration: none; }
+  footer .repo { font-weight: 600; color: #1c2430; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="eyebrow">Firmware-Projekt · Hobby / Privat</div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <svg viewBox="0 0 48 48" fill="none" width="32" height="32" style="flex-shrink:0;">
+      <path d="M24,9 L37.6,32.5 L10.4,32.5 Z" stroke="#8E97A3" stroke-width="2.2" stroke-linejoin="round"/>
+      <circle cx="24" cy="9" r="5" fill="#E08A4C"/>
+      <circle cx="37.6" cy="32.5" r="5" fill="#7FA0D9"/>
+      <circle cx="10.4" cy="32.5" r="5" fill="#74B7A6"/>
+      <line x1="24" y1="24.67" x2="31.07" y2="17.6" stroke="#E9E4D8" stroke-width="2.8" stroke-linecap="round"/>
+      <circle cx="24" cy="24.67" r="2.6" fill="#E9E4D8"/>
+    </svg>
+    <h1>SENSORMETER WLAN</h1>
+  </div>
+  <div class="subtitle">Generisches ESP32-WROOM-32-DevKit — reines WLAN (kein Ethernet), 1× DHT22, OLED SSD1306, BOOT-Taster-Bedienung, SNMP, Syslog, MQTT/Home Assistant, Anbieter-Branding</div>
+  <div class="badges">
+    <span class="badge badge-orange">v0.9.0-rc4 · Beta</span>
+    <span class="badge badge-navy">Board-Bringup abgeschlossen · Qualitätskontrolle läuft</span>
+    <span class="badge badge-navy">WLAN-only, kein RJ45-Modularanschluss</span>
+    <span class="badge badge-navy">SNMP · Syslog · MQTT · Branding · OTA</span>
+    <span class="badge badge-navy">Schwesterprojekte: Sensormeter, Display, PoE</span>
+  </div>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Überblick</h2>
+      <p>Bewusst reduzierte, kostengünstigere WLAN-only-Variante des
+      Sensormeter-Ursprungsprojekts (WT32-ETH01): genau ein interner DHT22,
+      kein Modulstecker/RJ45, keine Erweiterbarkeit. Wer zwei Sensoren oder
+      eine Modularerweiterung braucht, nutzt weiterhin Sensormeter bzw.
+      Sensormeter PRO.</p>
+      <p>Zeigt Werte lokal auf einem OLED an, stellt sie über Weboberfläche,
+      SNMP und Syslog bereit und meldet sich optional per MQTT-Discovery bei
+      Home Assistant an (Sensor-Rolle). Ohne funktionierendes WLAN spannt das
+      Gerät einen eigenen Einrichtungs-Access-Point auf (echter SoftAP).</p>
+    </section>
+
+    <section>
+      <h2>Hardware</h2>
+      <ul>
+        <li>Generisches ESP32-WROOM-32-DevKit (30-/38-Pin, CP2102/CH340) —
+        günstig, breit verfügbar, kein Spezialboard nötig</li>
+        <li>DHT22/AM2302 an GPIO4 (kein Boot-Strapping-Pin)</li>
+        <li>OLED SSD1306, 0,96", 128×64, I2C an GPIO21/22 — ESP32-
+        Standardbelegung, da kein Ethernet-PHY diese Pins blockiert</li>
+        <li>BOOT-Taster (GPIO0) zusätzlich als Bedienelement: kurzer Tipp =
+        Seitenwechsel, 3s+20s Halten = Werksreset (Auslösung erst beim
+        Loslassen, Fail-Safe). EN-Taster bleibt reiner Hardware-Reset</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Architektur-Abstammung</h2>
+      <p>Kein vorgegebenes Lastenheft wie bei Sensormeter/Sensormeter Display
+      — Lastenheft, Pflichtenheft und BOM komplett neu entworfen, aber
+      Architektur/Code bewusst 1:1 vom bewährten Sensormeter-Projekt
+      übernommen und WLAN-only gekürzt (kein LAN-Zweig, kein Sensor-2). Gleiche
+      SNMP-Basis-OID <code>.1.3.6.1.4.1.99999.x</code> wie Sensormeter/PoE —
+      seit 2026-07-12 auch identische Offsets (WLAN-IP=.2.2, RSSI=.2.3, LAN-IP
+      .2.1 unregistriert statt verschoben). Details: entscheidungen.md.</p>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Software-Architektur</h2>
+
+      <div class="modgroup">
+        <div class="modgroup-label">Datenhaltung &amp; Persistenz</div>
+        <div class="pill-row">
+          <span class="pill">DataManager</span><span class="pill">ConfigManager</span>
+          <span class="pill">StorageManager</span>
+        </div>
+      </div>
+
+      <div class="modgroup">
+        <div class="modgroup-label">Netzwerk &amp; Zeit</div>
+        <div class="pill-row">
+          <span class="pill">NetworkManager</span><span class="pill">TimeManager</span>
+        </div>
+      </div>
+
+      <div class="modgroup">
+        <div class="modgroup-label">Sensorik &amp; Anzeige</div>
+        <div class="pill-row">
+          <span class="pill">SensorManager</span><span class="pill">DisplayManager</span>
+        </div>
+      </div>
+
+      <div class="modgroup">
+        <div class="modgroup-label">Fernzugriff</div>
+        <div class="pill-row">
+          <span class="pill">WebServerManager</span><span class="pill">OtaManager</span>
+          <span class="pill">SNMPManager</span><span class="pill">SyslogManager</span>
+          <span class="pill">MqttManager</span><span class="pill">BrandingManager</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Datenfluss</h2>
+      <div class="flow-box">
+        <div class="flow-title">Datenquelle</div>
+        <div class="flow-sub">1× DHT22 (60s-Takt) · NTP · WLAN-Status</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">
+        <div class="flow-title">DataManager (7-Tage-Ringpuffer, persistent) / ConfigManager (config.xml)</div>
+        <div class="flow-sub">LittleFS, sicheres Schreiben über .tmp+Rename, Default-Fallback</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">
+        <div class="flow-title">OLED / Webserver / SNMP / Syslog / MQTT-Discovery</div>
+        <div class="flow-sub">I2C · HTTP + Chart.js · UDP 161 · UDP 514 · Home-Assistant-Discovery</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Entwicklungsansatz</h2>
+      <ul>
+        <li>Jede Phase per <b>pio run</b> gebaut &amp; verifiziert, Flash-/RAM-Deltas im Entscheidungsprotokoll dokumentiert</li>
+        <li>MQTT/Home Assistant und Anbieter-Branding zuerst hier entworfen
+        und auf echter Hardware verifiziert, danach unverändert auf
+        Sensormeter/Sensormeter PoE portiert</li>
+        <li>Partitionstabelle auf <b>min_spiffs.csv</b> umgestellt: Flash-
+        Auslastung dadurch von 83,2 % auf 55,9 % gesenkt (deutlich größere
+        App-Slots, LittleFS-Datenpartition bleibt ausreichend groß)</li>
+      </ul>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Status &amp; Kennzahlen</h2>
+      <table class="kpi">
+        <tr><td>Version</td><td>0.9.0-rc4 (Beta)</td></tr>
+        <tr><td>Umsetzung</td><td>P0–P7 vollständig + MQTT + Branding</td></tr>
+        <tr><td>Flash-Nutzung</td><td>55,9 %</td></tr>
+        <tr><td>RAM (statisch)</td><td>17,5 %</td></tr>
+        <tr><td>Board-Bringup</td><td>abgeschlossen, QK läuft</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>Funktionen</h2>
+      <ul>
+        <li>WLAN mit DHCP/statischer IP (getrennte Blöcke, Auswahlmenü statt
+        Checkbox), echter Fallback-SoftAP „installer" ohne Netzwerk</li>
+        <li>OLED-Seitenrotation: Systemname, WLAN-Signal, Uhrzeit, Sensorwert,
+        Status (6, 7 bei aktivem Branding), BOOT-Taster als Bedienelement</li>
+        <li>Webserver: Hauptseite mit Verlaufsgraph + Syslog-Tabelle + Log,
+        passwortgeschützte Einstellungsseite, REST-API, XML-Import/-Export,
+        lokales OTA</li>
+        <li>SNMP v1/v2c (read-only, Port 161), Basis-OID identisch zu
+        Sensormeter/PoE, unbeantwortete Zweige statt verschobener Nummern</li>
+        <li>Syslog (UDP 514): Statusreport je Sensorzyklus + sofortige
+        Fehler-/Warning-Events</li>
+        <li>MQTT/Home-Assistant-Discovery: Temperatur/Luftfeuchte (Sensor-
+        Rolle), deaktiviert ohne konfigurierten Broker</li>
+        <li>Anbieter-Branding: Name + Logo (128×64, 1bpp), eigene OLED-Seite
+        + Web-Header, Familien-Standardlogo wird automatisch provisioniert</li>
+        <li>Werksreset mit vier wählbaren Umfängen (Alles / Konfiguration /
+        Messwerte / Branding), zusätzlich per BOOT-Taster und Serial</li>
+        <li>Serial-Kommandozeile (USB): status/dhcp/ip/wifi/dump/upload/reset[
+        all] — inkl. XML-Config-Backup ohne Netzwerkzugriff</li>
+        <li>Persistenter <code>/log.txt</code> (Rotation bei 32 KB) mit
+        WARNING-Stufe, Ping-Kollisionscheck vor statischer IP</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Offen</h2>
+      <ul>
+        <li>MQTT/Home-Assistant-Verhalten gegen einen echten Broker noch
+        nicht getestet (nur sauberer Boot deaktiviert verifiziert)</li>
+        <li>Task-Watchdog (10s, panic-on-hang) und <b>loopTask</b>-Stack
+        (16KB) gebaut, noch nicht geflasht</li>
+        <li>Werksreset-Dropdown-CSS-Fix gebaut, noch nicht geflasht</li>
+        <li>SNMP-Antwort auf den vereinheitlichten OIDs (.2.2/.2.3) nur per
+        Code-Review, nicht per <b>snmpget</b> live geprüft (fehlende
+        Netzroute zum Geräte-Subnetz in dieser Sitzung)</li>
+        <li>Branding-Upload/-Anzeige im Browser nicht vollständig End-to-End
+        getestet (gleicher Netzroute-Vorbehalt)</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Einstieg</h2>
+      <ul>
+        <li><b>scripts/flash.ps1 -Project wlan</b> – Setup + Flash</li>
+        <li><b>docs/admin-guide.pdf</b> – Inbetriebnahme, Weboberfläche, SNMP/Syslog/MQTT/Branding, Serial-Kommandozeile</li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div>
+    <div class="repo">github.com/peterhagelhof7-cmd/sensormeter-wlan</div>
+    <div>Entwickelt mit Unterstützung von Claude (Anthropic) als Coding-Assistent</div>
+  </div>
+  <div style="text-align:right;max-width:90mm;">
+    <b>Kerndokumente im Repo:</b> Lastenheft · Pflichtenheft · Entscheidungsprotokoll ·
+    Admin-Guide · Verdrahtungsplan · Stückliste · PRTG-/Zabbix-Integration
+  </div>
+</footer>
+
+</div>
+</body>
+</html>
