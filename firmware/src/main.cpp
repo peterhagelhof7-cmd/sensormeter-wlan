@@ -24,6 +24,7 @@
 #include <Arduino.h>
 #include <ESPmDNS.h>
 #include <LittleFS.h>
+#include <esp_task_wdt.h>
 
 #include "BrandingManager.h"
 #include "ConfigManager.h"
@@ -305,6 +306,26 @@ void setup() {
   networkManager.begin();     // setzt Zustand auf INIT, dann WLAN_CHECK
   webServerManager.begin();   // async - kein eigener loop()-Aufruf noetig
   snmpManager.begin();
+
+  // Task-Watchdog-Timer (TWDT), siehe docs/entscheidungen.md "Task-
+  // Watchdog (TWDT)": ESP-IDF haelt ihn per Default am Laufen, aber ohne
+  // Panic-Reaktion (nur eine Logzeile bei einem Timeout, die niemand
+  // ueberwacht). esp_task_wdt_init() konfiguriert einen bereits
+  // laufenden TWDT laut esp_task_wdt.h einfach um, deshalb kein
+  // Sonderfall fuer "schon initialisiert" noetig (anders als auf
+  // Arduino-ESP32 3.x, siehe sensormeter-poe). Bewusst erst hier am Ende
+  // von setup() statt ganz am Anfang angemeldet - die vorangehenden
+  // *.begin()-Aufrufe (v.a. ein etwaiger LittleFS-Erststart-Format) sind
+  // einmalig und duerfen laenger dauern, ohne dass das als Hang
+  // gewertet wird; ab jetzt (loop()) sind alle Zyklen kurz und
+  // beschraenkt. 10s statt der ESP-BMC-Vorgabe von 5s, weil loop() hier
+  // sehr viele Manager synchron durchlaeuft, u.a. einen MQTT-Reconnect-
+  // Versuch mit potenziell mehrsekuendigem TCP-Connect-Timeout - 5s
+  // waere ohne echten Hang zu knapp. Nur der Haupt-Loop (loopTask, hier
+  // via NULL) wird angemeldet - kein anderer Task im Projekt hat einen
+  // kurzen, begrenzten Zyklus.
+  esp_task_wdt_init(10, true);
+  esp_task_wdt_add(NULL);
 }
 
 void loop() {
@@ -331,5 +352,6 @@ void loop() {
     mdnsStarted = true;
   }
 
+  esp_task_wdt_reset();
   delay(50);
 }

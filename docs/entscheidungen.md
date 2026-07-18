@@ -1270,3 +1270,24 @@ Fix uebernommen: `OtaManager::scanChunkForMarker()` auf rohe
 `_capture` durch feste Byte-Puffer ersetzt. `pio run` erfolgreich (Flash/
 RAM praktisch unveraendert). Nicht getestet: echter OTA-Upload auf
 echter Hardware - kein Board in dieser Sitzung angeschlossen.
+
+## 2026-07-18 — Task-Watchdog (TWDT): Panic-on-Hang aktiviert, portiert von ESP-BMC
+
+Bislang lief der ESP-IDF-eigene Task-Watchdog-Timer (TWDT) nur mit
+Default-Konfiguration mit: 5s-Timeout, beide Idle-Tasks angemeldet, aber
+`panic=false` - ein haengender Task erzeugt damit nur eine Logzeile,
+kein Reboot. Nach dem Vorbild von ESP-BMCs `watchdog_manager` jetzt auch
+hier scharf geschaltet, aber bewusst NUR der reine
+Watchdog-Mechanismus - keine RGB-LED (kein bestaetigtes adressierbares
+LED auf diesem Board, und ohnehin nicht Teil dieses Backlog-Punkts).
+
+Dieses Projekt laeuft wie Sensormeter (WT32-ETH01) auf Arduino-ESP32
+2.0.17 (IDF4.4-Basis) - identische zweiargumentige
+`esp_task_wdt_init(uint32_t timeout, bool panic)`-Signatur, siehe
+dortiger Eintrag fuer die volle Begruendung (Timeout bewusst 10s statt
+ESP-BMCs 5s wegen des synchronen `MqttManager`-Reconnect-Versuchs im
+`loop()`, Anmeldung erst am Ende von `setup()`, `esp_task_wdt_reset()`
+einmal pro `loop()`-Durchlauf, nur der Haupt-Loop angemeldet).
+
+Verifiziert per `pio run` (sauberer Build, RAM/Flash-Nutzung unveraendert
+gegenueber vorher), noch nicht auf echter Hardware geflasht/getestet.
