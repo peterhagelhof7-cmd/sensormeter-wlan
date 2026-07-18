@@ -77,6 +77,11 @@ Sensormeter-Projekts.
 **Version:** `0.9.0-rc4` (Beta) — Versionsschema siehe
 [docs/entscheidungen.md](docs/entscheidungen.md#versionierung).
 
+Fertiges Binary für das lokale OTA-Update (kein PlatformIO nötig):
+[Releases → v0.9.0-rc4](https://github.com/peterhagelhof7-cmd/sensormeter-wlan/releases/tag/v0.9.0-rc4)
+— Hinweis: zum Zeitpunkt dieses Release noch nicht auf echter Hardware
+verifiziert, siehe Release-Notes.
+
 Aktueller Stand: **P0–P7 code-vollständig, Board-Bringup abgeschlossen** —
 erstes Gerät läuft über mehrere Test-/Update-Zyklen stabil auf echter
 Hardware (DHT22, OLED, WLAN inkl. Fallback-AP, Taster, Webserver, SNMP,
