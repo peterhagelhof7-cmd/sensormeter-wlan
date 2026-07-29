@@ -25,6 +25,7 @@
 //   <snmp community="public"/>
 //   <mqtt enabled="false" server="" port="1883" user="" password=""/>
 //   <branding vendorName=""/>
+//   <reboot enabled="false" hour="3" minute="0"/>
 // </config>
 
 struct DeviceConfig {
@@ -83,6 +84,15 @@ struct DeviceConfig {
   // BrandingManager. Leer = Feature inaktiv (Default), kein
   // Verhaltensunterschied fuer bestehende Installationen.
   String brandingVendorName;
+
+  // Taeglicher automatischer Neustart zu fester Uhrzeit (optional, Default
+  // aus) - ueber die Einstellungsseite aktivierbar, z.B. um sich langfristig
+  // ansammelnden Speicherfragmentierungs-/Verbindungsproblemen vorzubeugen.
+  // Braucht eine per NTP synchronisierte Uhr (siehe RebootManager) - ohne
+  // die wird nichts ausgeloest.
+  bool rebootScheduleEnabled = false;
+  uint8_t rebootHour = 3;    // 0-23
+  uint8_t rebootMinute = 0;  // 0-59
 };
 
 class ConfigManager {

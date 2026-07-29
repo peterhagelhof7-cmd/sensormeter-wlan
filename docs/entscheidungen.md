@@ -1362,3 +1362,24 @@ Betriebszustand widerspiegelt. Kein Sicherheitsgewinn (weiterhin
 Community-String im Klartext) - rein pragmatische Umstellung, siehe
 sensormeter-display fuer die vorher geprueften und verworfenen
 SNMPv3-Alternativen.
+
+## 2026-07-23 — Taeglicher automatischer Neustart (portiert aus sensormeter/repo)
+
+Gleiches Feature wie in den Geschwisterprojekten (sensormeter,
+sensormeter-poe), aber ohne das dortige gemeinsame `TimeUtils.h` - dieses
+Projekt hat keine geteilte `isTimeSynced()`-Funktion, daher bekommt der
+neue `RebootManager` hier eine direkte `TimeManager&`-Abhaengigkeit und
+fragt `TimeManager::isSynced()` ab (bestehendes Member, kein neuer Code
+in TimeManager noetig). Ansonsten identische Logik: `loop()` prueft
+`rebootScheduleEnabled` + aktuelle Uhrzeit (`localtime_r`) gegen
+`rebootHour`/`rebootMinute`, `ESP.restart()` bei Treffer, kein
+persistentes "heute schon ausgeloest"-Flag noetig (der Neustart selbst
+verhindert ein Mehrfachausloesen innerhalb derselben Minute).
+
+Konfiguration ueber die bestehende Einstellungsseite (neuer Block
+"Automatischer Neustart", `<input type="time">`) sowie `/api/config`
+GET/POST, neues `<reboot enabled="" hour="" minute=""/>`-Element in
+`config.xml` (Default: aus, 03:00).
+
+`pio run -e esp32dev` erfolgreich (Flash 56,1%, RAM 17,5%). Noch nicht
+per OTA auf echte Hardware ausgerollt/verifiziert.

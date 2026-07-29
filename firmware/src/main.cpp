@@ -33,6 +33,7 @@
 #include "MqttManager.h"
 #include "NetworkManager.h"
 #include "OtaManager.h"
+#include "RebootManager.h"
 #include "SNMPManager.h"
 #include "SensorManager.h"
 #include "StorageManager.h"
@@ -79,6 +80,7 @@ WebServerManager webServerManager(dataManager, configManager, networkManager, ot
 SNMPManager snmpManager(dataManager, configManager, networkManager);
 SyslogManager syslogManager(dataManager, configManager, networkManager, timeManager);
 MqttManager mqttManager(dataManager, configManager, networkManager);
+RebootManager rebootManager(dataManager, configManager, timeManager);
 
 // Serial-Kommandozeile fuer den Fall, dass das Geraet nur per USB, aber
 // nicht per Netzwerk erreichbar ist (z.B. andere statische IP als das
@@ -348,6 +350,7 @@ void loop() {
   snmpManager.loop();
   syslogManager.loop();
   mqttManager.loop();
+  rebootManager.loop();
 
   // Einmaliger mDNS-Start, sobald eine WLAN-IP vorliegt (auch im Fallback-
   // Netz "installer") - vor RUN_NORMAL ist noch keine IP vergeben.

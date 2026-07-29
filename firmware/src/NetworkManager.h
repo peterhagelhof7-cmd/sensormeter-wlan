@@ -57,6 +57,9 @@ class NetworkManager {
 
   unsigned long _networkCheckStartedMillis = 0;
   unsigned long _lastFallbackJoinAttemptMillis = 0;
+  // Zeitpunkt des letzten aktiven Rejoin-Versuchs ins konfigurierte WLAN aus dem
+  // Fallback-AP heraus (siehe FALLBACK_REJOIN_INTERVAL_MS + Selbstheilung in loop()).
+  unsigned long _lastFallbackRejoinMillis = 0;
   // Zeitpunkt des letzten aktiven Reconnect-Versuchs im WLAN_CHECK (siehe
   // RECONNECT_RETRY_INTERVAL_MS in NetworkManager.cpp).
   unsigned long _lastReconnectAttemptMillis = 0;

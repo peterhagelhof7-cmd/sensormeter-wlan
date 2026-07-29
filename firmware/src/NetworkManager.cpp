@@ -11,6 +11,11 @@ static const unsigned long WLAN_CHECK_TIMEOUT_MS = 5UL * 60UL * 1000UL;
 // schnelles Feedback statt 5 Minuten Wartezeit, siehe begin().
 static const unsigned long WLAN_TEST_TIMEOUT_MS = 30UL * 1000UL;
 static const unsigned long FALLBACK_RETRY_INTERVAL_MS = 30UL * 1000UL;
+// Aus dem Fallback-AP heraus alle 2 Minuten aktiv einen erneuten Verbindungs-
+// versuch ins konfigurierte WLAN anstossen (Backstop zusaetzlich zum Core-Auto-
+// Reconnect, der im AP_STA-Modus ohnehin weiterlaeuft). Sobald es klappt, wird
+// der Fallback-AP abgeschaltet (siehe loop()/startFallbackAp()).
+static const unsigned long FALLBACK_REJOIN_INTERVAL_MS = 2UL * 60UL * 1000UL;
 // Aktiver WLAN-Reconnect-Versuch alle 20s, solange im WLAN_CHECK noch kein
 // GOT_IP kam - die Firmware wartet damit nicht mehr passiv auf den ESP32-
 // Core-Auto-Reconnect, sondern stoesst selbst regelmaessig einen erneuten
@@ -100,15 +105,27 @@ void NetworkManager::applyWlanConfig() {
 }
 
 void NetworkManager::startFallbackAp() {
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_MODE_AP);
+  // AP_STA statt AP-only: der eigene Access-Point ist erreichbar, die Station
+  // versucht PARALLEL weiter, das konfigurierte WLAN zu erreichen (Core-Auto-
+  // Reconnect + aktiver Rejoin in loop()). So heilt sich der Fallback selbst,
+  // sobald das WLAN zurueckkommt - ohne Reboot. (Frueher: WIFI_MODE_AP +
+  // WiFi.disconnect(true) schaltete die Station komplett ab -> Sackgasse, aus
+  // der das Geraet nur per Reboot/Neukonfiguration wieder herausfand.)
+  WiFi.mode(WIFI_MODE_APSTA);
   WiFi.softAPConfig(FALLBACK_AP_IP, FALLBACK_AP_IP, FALLBACK_AP_SUBNET);
   _apActive = WiFi.softAP(FALLBACK_WLAN_SSID, FALLBACK_WLAN_PSK);
+
+  DeviceConfig cfg = _config.getConfig();
+  if (cfg.wlanSsid.length() > 0) {
+    WiFi.begin(cfg.wlanSsid.c_str(), cfg.wlanPsk.c_str());
+    applyWlanConfig();
+  }
+  _lastFallbackRejoinMillis = millis();
 
   if (_apActive) {
     Serial.print("[NET] Fallback-Access-Point \"");
     Serial.print(FALLBACK_WLAN_SSID);
-    Serial.print("\" gestartet, IP: ");
+    Serial.print("\" gestartet (AP_STA, Station versucht weiter), IP: ");
     Serial.println(WiFi.softAPIP());
   } else {
     Serial.println("[NET] Fallback-Access-Point konnte nicht gestartet werden");
@@ -164,6 +181,39 @@ void NetworkManager::begin() {
 void NetworkManager::loop() {
   SystemState state = _data.getSystemState();
 
+  // --- Selbstheilung, solange der eigene Fallback-AP laeuft ---
+  // Sobald _apActive gilt, meldet networkOk() dauerhaft "ok" (der AP zaehlt mit),
+  // sodass die normale WLAN_CHECK/RUN_NORMAL-Logik das konfigurierte WLAN nie
+  // wieder pruefen wuerde - ohne dies bliebe das Geraet bis zum Reboot im AP.
+  // Deshalb hier explizit auf die Station-IP (_wlanGotIp) achten und periodisch
+  // aktiv den Rejoin anstossen; der AP bleibt via AP_STA die ganze Zeit erreichbar.
+  if (_apActive) {
+    if (_wlanGotIp) {
+      // Konfiguriertes WLAN (wieder) erreicht -> Fallback-AP abschalten.
+      WiFi.softAPdisconnect(true);
+      _apActive = false;
+      _wlanDownSinceMillis = 0;
+      _data.pushLogEntry("Netzwerk: konfiguriertes WLAN aus dem Fallback-AP wiederhergestellt",
+                          DataManager::SEVERITY_INFO);
+      _data.setSystemState(SystemState::RUN_NORMAL);
+      return;
+    }
+    // Betrieb laeuft auf dem AP weiter (wie bisher: der AP zaehlt als RUN_NORMAL).
+    if (state != SystemState::RUN_NORMAL) {
+      _data.setSystemState(SystemState::RUN_NORMAL);
+    }
+    if (_config.getConfig().wlanSsid.length() > 0 &&
+        millis() - _lastFallbackRejoinMillis > FALLBACK_REJOIN_INTERVAL_MS) {
+      DeviceConfig cfg = _config.getConfig();
+      Serial.println("[NET] Fallback-AP aktiv - erneuter Rejoin-Versuch ins konfigurierte WLAN");
+      WiFi.mode(WIFI_MODE_APSTA);
+      WiFi.begin(cfg.wlanSsid.c_str(), cfg.wlanPsk.c_str());
+      applyWlanConfig();
+      _lastFallbackRejoinMillis = millis();
+    }
+    return;
+  }
+
   if (state == SystemState::WLAN_CHECK) {
     if (networkOk()) {
       _data.setSystemState(SystemState::RUN_NORMAL);
@@ -191,11 +241,9 @@ void NetworkManager::loop() {
       _lastReconnectAttemptMillis = millis();
     }
   } else if (state == SystemState::FALLBACK_MODE) {
-    if (networkOk()) {
-      _data.setSystemState(SystemState::RUN_NORMAL);
-    } else if (millis() - _lastFallbackJoinAttemptMillis > FALLBACK_RETRY_INTERVAL_MS) {
-      // Seltener Fall: WiFi.softAP() ist beim ersten Versuch fehlgeschlagen -
-      // erneut versuchen.
+    // Hierher kommt man nur, wenn WiFi.softAP() fehlschlug (_apActive==false;
+    // sonst haette der Selbstheilungs-Block oben uebernommen) - erneut versuchen.
+    if (millis() - _lastFallbackJoinAttemptMillis > FALLBACK_RETRY_INTERVAL_MS) {
       startFallbackAp();
       _lastFallbackJoinAttemptMillis = millis();
     }
