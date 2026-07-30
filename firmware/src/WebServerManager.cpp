@@ -1032,8 +1032,22 @@ void WebServerManager::begin() {
           // Reihenfolge des Request-Bodys, ein Feld nach dem Datei-Input
           // waere an dieser Stelle (erster Chunk der Datei) noch nicht
           // verfuegbar.
+          //
+          // r->contentLength() statt UPDATE_SIZE_UNKNOWN: ohne bekannte
+          // Groesse legt Update.begin() die GESAMTE OTA-Partitionsgroesse
+          // als zu loeschenden Bereich zugrunde (siehe Updater.cpp: "size ==
+          // UPDATE_SIZE_UNKNOWN -> size = partition->size") statt nur der
+          // tatsaechlich benoetigten Groesse - ein langer blockierender
+          // Flash-Loeschvorgang gleich zu Beginn des Uploads, der auf
+          // echter Hardware reproduzierbar einen kurzen WLAN-Abriss
+          // ausgeloest hat (Interrupts/Cache waehrend Flash-Operationen
+          // kurz deaktiviert) und dabei die laufende TCP-Verbindung des
+          // Uploads gekappt hat - siehe docs/entscheidungen.md. Die
+          // Content-Length des Multipart-Bodys ist geringfuegig groesser
+          // als die reine .bin (Boundary-/Header-Overhead), das ist fuer
+          // die Groessenpruefung in Update.begin() unproblematisch.
           _ota.setAllowDowngrade(r->hasParam("otaForceDowngrade", true));
-          _otaInProgress = _ota.beginLocalUpdate(UPDATE_SIZE_UNKNOWN);
+          _otaInProgress = _ota.beginLocalUpdate(r->contentLength());
           _otaSuccess = false;
         }
         if (_otaInProgress) {

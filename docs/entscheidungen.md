@@ -1383,3 +1383,68 @@ GET/POST, neues `<reboot enabled="" hour="" minute=""/>`-Element in
 
 `pio run -e esp32dev` erfolgreich (Flash 56,1%, RAM 17,5%). Noch nicht
 per OTA auf echte Hardware ausgerollt/verifiziert.
+
+## 2026-07-30 — OTA-Upload bricht mit WLAN-Verbindungsabbruch ab (Bug, TEILWEISE behoben)
+
+**Symptom** (real getestet, Board an COM5, per WLAN "SPS-Werkstatt"
+erreichbar unter `192.168.178.17`): ein OTA-Upload per
+`POST /api/ota/upload` (curl und vermutlich auch Browser) bricht
+zuverlaessig ab - curl meldet nach der `100 Continue`-Bestaetigung
+"Server returned nothing" (CURLE_GOT_NOTHING, Fehler 52) bzw. einen
+Empfangsfehler (CURLE_RECV_ERROR, Fehler 56), je nach Versuch nach 3 bis
+19 Sekunden.
+
+**Root Cause (per parallelem Serial-Log bestaetigt):** waehrend des
+Uploads bricht die WLAN-Verbindung des Geraets kurz ab und baut sich neu
+auf (`[NET] WLAN-Verbindung verloren` -> `[STATE] -> WLAN_CHECK` ->
+`[NET] WLAN verbunden`, beobachtete Ausfalldauer 2s bzw. 20s je nach
+Versuch). Dieser Wiederverbindungsaufbau reisst die laufende
+TCP-Verbindung des Uploads ab - der Client (curl/Browser) bekommt keine
+Antwort mehr.
+
+**Fix (teilweise wirksam):** `WebServerManager.cpp`, OTA-Upload-Handler
+rief bislang `_ota.beginLocalUpdate(UPDATE_SIZE_UNKNOWN)` auf. Ohne
+bekannte Groesse legt `Update.begin()` (Arduino-ESP32-Core) die GESAMTE
+OTA-Partitionsgroesse als zu loeschenden Bereich zugrunde statt nur der
+tatsaechlich benoetigten Groesse (siehe `Updater.cpp`: `size ==
+UPDATE_SIZE_UNKNOWN -> size = partition->size`) - ein unnoetig langer,
+blockierender Flash-Loeschvorgang gleich zu Beginn jedes Uploads.
+Geaendert auf `_ota.beginLocalUpdate(r->contentLength())` - nutzt die
+tatsaechliche (Multipart-)Content-Laenge des Requests statt der vollen
+Partitionsgroesse.
+
+Neu gebaut (0.9.3, Flash 56,1% / 1.103.561 B, RAM 17,5%), per
+`pio run --target upload --upload-port COM5` erfolgreich seriell
+geflasht (automatischer Reset ueber RTS - dieser Adapter braucht anders
+als beim sensormeter-Hauptprojekt KEINEN manuellen Boot-Modus), Version
+per `/`-Weboberflaeche live bestaetigt (`0.9.3`).
+
+**Ergebnis nach dem Fix: OTA-Upload schlaegt weiterhin fehl** (3 von 3
+Testversuchen, siehe oben - der Fix reduziert die urspruenglich
+blockierende Löschmenge, behebt den WLAN-Abbruch selbst aber nicht
+vollstaendig). Vermutete Restursache: Flash-Schreibzugriffe waehrend des
+laufenden Uploads (Update.write() pro Chunk) deaktivieren kurzzeitig
+Interrupts/Cache auf beiden Kernen - bei nur mittelmaessigem WLAN-Signal
+(-62 bis -64 dBm waehrend aller Tests) reicht das offenbar wiederholt
+aus, um Beacons/Keepalives zu verpassen und die Verbindung zum
+Access-Point zu verlieren. sensormeter (WT32-ETH01, identisches
+Upload-Handler-Muster) wurde laut vorherigen Notizen bereits erfolgreich
+per OTA aktualisiert - ob das an Ethernet statt WLAN, staerkerem Signal
+oder einem anderen Umgebungsfaktor liegt, ist nicht geklaert.
+
+**Kein Risiko fuer die laufende Firmware:** OTA schreibt immer in die
+inaktive Partition - alle drei fehlgeschlagenen Versuche liessen das
+Geraet unveraendert auf der zuvor laufenden Firmware weiterlaufen
+(bestaetigt per `status`: `RUN_NORMAL`, stabiler freier Heap, keine
+Neustarts ausser den absichtlich ausgeloesten).
+
+**Offen / naechste Schritte** (siehe auch `docs/known-issues.md`):
+- Testen mit staerkerem WLAN-Signal (Geraet naeher am Access Point)
+- Pruefen, ob dasselbe Muster (`UPDATE_SIZE_UNKNOWN` im OTA-Handler) auch
+  in sensormeter, sensormeter-poe, sensormeter-display und ESP-BMC
+  vorkommt und dort ebenfalls den Fix braucht
+- Ggf. WiFi-Sendeleistung/Power-Save-Einstellungen waehrend eines
+  laufenden OTA-Uploads anpassen
+
+Workaround bis zur vollstaendigen Behebung: Firmware-Updates seriell
+statt per OTA einspielen (`pio run --target upload`).
