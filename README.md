@@ -75,13 +75,11 @@ Sensormeter-Projekts.
 
 `firmware/` ist ein PlatformIO-Projekt (Board `esp32dev`, Framework Arduino).
 
-**Version:** `0.9.0-rc4` (Beta) — Versionsschema siehe
+**Version:** `0.9.4` (Beta) — Versionsschema siehe
 [docs/entscheidungen.md](docs/entscheidungen.md#versionierung).
 
 Fertiges Binary für das lokale OTA-Update (kein PlatformIO nötig):
-[Releases → v0.9.0-rc4](https://github.com/peterhagelhof7-cmd/sensormeter-wlan/releases/tag/v0.9.0-rc4)
-— Hinweis: zum Zeitpunkt dieses Release noch nicht auf echter Hardware
-verifiziert, siehe Release-Notes.
+[Releases → v0.9.4](https://github.com/peterhagelhof7-cmd/sensormeter-wlan/releases/tag/v0.9.4).
 
 Aktueller Stand: **P0–P7 code-vollständig, Board-Bringup abgeschlossen** —
 erstes Gerät läuft über mehrere Test-/Update-Zyklen stabil auf echter
@@ -93,10 +91,15 @@ Anbindung ist geflasht und bootet sauber (deaktiviert per Default), aber
 noch nicht gegen einen echten Broker/Home-Assistant-Instanz
 durchgetestet — siehe `docs/entscheidungen.md`.
 
-**Qualitätskontrolle läuft**: zuletzt (2026-07-18) einen bei Sensormeter
-gefundenen Chunkgrößen-Bug im OTA-Marker-Scan übernommen und behoben
-(gebaut und geflasht) sowie den `loopTask`-Stack vorsorglich auf 16KB
-verdoppelt (gebaut, noch nicht geflasht) — siehe
+**Qualitätskontrolle läuft**: zuletzt (2026-07-31) einen OTA-Update-Bug
+gefunden und behoben: Uploads über die Einstellungsseite konnten mitten
+im Transfer zu einem harten Reboot führen (Task-Watchdog-Starvation
+während der Flash-Schreibvorgänge) — auf echter Hardware per Serial
+geflasht und verifiziert (4/4 erfolgreiche OTA-Versuche danach).
+Außerdem den Startseiten-Graph auf einen lesbaren 3-Tage-Ausschnitt
+(4 Messpunkte/Tag, Wochentag-Beschriftung statt nur Uhrzeit)
+umgestellt. Davor (2026-07-18) einen bei Sensormeter gefundenen
+Chunkgrößen-Bug im OTA-Marker-Scan übernommen und behoben — siehe
 `docs/entscheidungen.md`.
 
 Am schnellsten per PowerShell-Skript einrichten (installiert Python/Git/
