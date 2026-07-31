@@ -247,7 +247,7 @@ String WebServerManager::buildMainPageBody() const {
           "</span></div>";
   html += "</div>";
 
-  html += "<div class=\"block\"><h2>7-Tage-Verlauf</h2><canvas id=\"chart\" height=\"200\"></canvas></div>";
+  html += "<div class=\"block\"><h2>3-Tage-Verlauf</h2><canvas id=\"chart\" height=\"200\"></canvas></div>";
 
   html += "<div class=\"block\"><h2>Letzte Meldungen</h2><table id=\"logtable\"><tr><th>Zeit</th><th>Meldung</th></tr></table></div>";
 
@@ -573,19 +573,33 @@ void WebServerManager::handleApiLogs(AsyncWebServerRequest* request) {
 }
 
 void WebServerManager::handleApiGraph(AsyncWebServerRequest* request) {
+  // Startseiten-Graph zeigt bewusst nur die letzten 3 Tage (nicht den vollen
+  // 7-Tage-Ringpuffer) und darin nur die Messpunkte 00/06/12/18 Uhr - sonst
+  // sind bei stuendlicher Aufloesung ueber mehrere Tage weder Achse noch
+  // Legende lesbar. tm_wday folgt der C-Konvention (0=Sonntag).
+  static const char* const kWochentagDE[7] = {"So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"};
+  static const size_t kTageVergangenheit = 3;
+  static const size_t kMaxEintraege = kTageVergangenheit * 24;
+
   HourValue buffer[DataManager::RINGBUFFER_SIZE];
-  size_t count = _data.getRingbuffer(buffer, DataManager::RINGBUFFER_SIZE);
+  size_t total = _data.getRingbuffer(buffer, DataManager::RINGBUFFER_SIZE);
+  // getRingbuffer() liefert immer aeltestes-zuerst ab Puffer-Anfang - bei
+  // < kMaxEintraege angeforderten Eintraegen wuerden das die AELTESTEN statt
+  // der neuesten 3 Tage sein. Deshalb hier alles holen und selbst den
+  // hinteren (juengsten) Ausschnitt nehmen.
+  size_t start = (total > kMaxEintraege) ? (total - kMaxEintraege) : 0;
 
   JsonDocument doc;
   JsonArray labels = doc["labels"].to<JsonArray>();
   JsonArray temps = doc["temperature"].to<JsonArray>();
   JsonArray hums = doc["humidity"].to<JsonArray>();
 
-  for (size_t i = 0; i < count; i++) {
+  for (size_t i = start; i < total; i++) {
     struct tm ti;
     localtime_r(&buffer[i].timestamp, &ti);
-    char buf[6];
-    strftime(buf, sizeof(buf), "%H:%M", &ti);
+    if (ti.tm_hour != 0 && ti.tm_hour != 6 && ti.tm_hour != 12 && ti.tm_hour != 18) continue;
+    char buf[12];
+    snprintf(buf, sizeof(buf), "%s %02d:00", kWochentagDE[ti.tm_wday], ti.tm_hour);
     labels.add(String(buf));
     temps.add(buffer[i].temperature);
     hums.add(buffer[i].humidity);
